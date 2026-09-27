@@ -158,6 +158,30 @@ Filled in stage by stage; gaps are listed at the bottom with a reason.
 | Weight change | Re-score changes the order | `test_evaluation_api.py::test_weight_change_rescores` |
 | Clock jump replay | Each job runs at its own time | `test_jobs.py::test_catch_up_runs_each_job_at_its_own_time` |
 
+## Negotiation (Stage 9)
+
+| Case | Behaviour | Test |
+|---|---|---|
+| Cooperative reaches target early | Stops after the round that reaches it | `test_negotiation.py::test_cooperative_reaches_target_and_stops_early` |
+| Stubborn | Ends after round 3 (best and final) | `test_negotiation.py::test_stubborn_ends_after_round_three` |
+| Vague | Clarify once, then `needs_human` | `test_negotiation.py::test_vague_twice_goes_to_a_human` |
+| Injection attempt | No effect on price or state | `test_negotiation.py::test_injection_has_no_effect_on_price_or_state`, `test_reply_text.py::test_injection_is_not_an_acceptance` |
+| Term change | `needs_human`, re-score, never auto-accepted | `test_negotiation.py::test_term_change_rescores_and_never_auto_accepts` |
+| Wants a call | `needs_human` | `test_negotiation.py::test_caller_goes_to_a_human` |
+| Timeout | Nudge, then `timed_out` | `test_negotiation.py::test_slow_vendor_nudged_then_timed_out` |
+| "okay/done" | Best-and-final at our ask, not a deal | `test_negotiation.py::test_ok_is_best_and_final_not_a_deal` |
+| Offer above max | Not recommended | `test_negotiation.py::test_offer_above_max_is_not_recommended` |
+| LLM invalid JSON | Retry, then deterministic reader; twice → human | `test_negotiation.py::test_invalid_reply_json_retries_then_falls_back`, `::test_two_parse_failures_go_to_a_human` |
+| LLM writes a wrong number | Validator rejects; template used | `test_negotiation.py::test_writer_wrong_number_caught_by_validator` |
+| Builder takes over | Agent sends nothing more (no nudges either) | `test_negotiation.py::test_builder_take_over_stops_the_agent`, `::test_manual_message_requires_take_over` |
+| Deadline mid-round | All threads closed, RFQ to approval | `test_negotiation.py::test_deadline_mid_round_closes_everything` |
+| Burst replies within 45 s | One parse | `test_negotiation.py::test_burst_replies_merged_into_one_parse` |
+| Stale reply | Recorded, ignored | `test_negotiation.py::test_stale_reply_recorded_but_ignored` |
+| Competitor disclosure | "Lower offer" first, exact price on repeat, never names; benchmark vendor not misled | `test_negotiation.py::test_disclosure_lower_offer_first_then_price`, `::test_benchmark_vendor_is_not_told_of_a_lower_offer` |
+| Target/max/other names in prompts | Never | `test_negotiation.py::test_target_and_max_never_in_any_prompt` |
+| Pricing: floor, 3%/2%/final, match benchmark | As specified | `test_pricing.py` |
+| Take-over permissions and tenancy | Site engineer 403; other org 404 | `test_negotiation.py::test_take_over_permissions_and_tenancy` |
+
 ## Gaps
 
 | Case | Reason |

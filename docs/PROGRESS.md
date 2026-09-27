@@ -55,8 +55,14 @@
 - UI: Quotes comparison (ranked table with score parts and marks, split/shortfall box, private limits).
 - Fixed: clock-jump catch-up now runs each job at its scheduled time.
 
+## Stage 9: Negotiation agent (done)
+- Pricing engine (benchmark, floor, match/3%/2%/best-and-final, restated in each vendor's terms).
+- Agent: threads, LLM writer with number validator and template fallback, reply reader with deterministic fallback, handoff rules, disclosure policy, timeouts with nudge, deadline, debounce, stale replies, negotiated quote revisions, completion → approval.
+- Scripted personas; endpoints for thread view, take over, manual message, close.
+- UI: Negotiation view (threads side by side with transcripts, offers, handoff reasons, take over).
+
 ## Next
-Stage 9: negotiation agent.
+Stage 10: approval, work orders and conflicts.
 
 ## Known gaps
 - `make demo` arrives with the demo panel (Stage 12).
