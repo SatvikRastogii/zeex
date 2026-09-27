@@ -73,9 +73,14 @@
 - UI: fulfilment on the work order page; "My work orders" in the Vendor Inbox.
 - Demo clock advance now waits for the worker to settle (deterministic demos).
 
+## Stage 12: Demo experience (done)
+- Seven scenarios played through the real API to their demo points; full run of scenario 1 to a closed order; reset.
+- Persona auto-replies (scripted or Gemini-voiced), per-vendor persona assignment, auto-reply toggle.
+- Demo Control Panel: scenarios, reset, full run, personas, clock, jobs, event log.
+- `make demo`; `docs/DEMO_SCRIPT.md` (10-minute click-by-click with talking points).
+
 ## Next
-Stage 12: demo experience.
+Stage 13: hardening and documentation.
 
 ## Known gaps
-- `make demo` arrives with the demo panel (Stage 12).
 - Live Gemini is not exercised (no key); the mock provider is labelled Simulated in the UI.
