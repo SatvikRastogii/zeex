@@ -306,6 +306,11 @@ class Quote(Row):
     received_at: Mapped[datetime | None]
     status: Mapped[str] = mapped_column(Text, default="draft_parsed")
     flags: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    # Unit price restated per canonical unit, before GST (computed by code, not the LLM).
+    price_per_canonical_paise: Mapped[int | None] = mapped_column(BigInteger)
+    source_message_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("messages.id"), unique=True
+    )
     version: Mapped[int] = mapped_column(default=1)
 
     __table_args__ = (UniqueConstraint("rfq_id", "vendor_id", "revision"),)
