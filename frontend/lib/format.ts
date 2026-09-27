@@ -38,3 +38,12 @@ export function formatINR(paise: number): string {
 export function newRef(): string {
   return crypto.randomUUID().replace(/-/g, "");
 }
+
+/** "380", "380.5", "1,00,000" -> paise; blank -> null. Rejects anything else. */
+export function rupeesToPaise(text: string): number | null {
+  const t = text.replace(/,/g, "").trim();
+  if (!t) return null;
+  if (!/^\d+(\.\d{1,2})?$/.test(t)) throw new Error(`Not a rupee amount: ${text}`);
+  const [r, p = ""] = t.split(".");
+  return Number(r) * 100 + Number(p.padEnd(2, "0"));
+}

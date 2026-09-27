@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { formatDate, formatIST, statusTag } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import Guard from "../../guard";
+import ComparisonView from "./comparison";
 import Quotes from "./quotes";
 
 type ShortlistRow = { vendor_id: string; vendor: string; score: number; reason: string; added_by_builder: boolean; status: string };
@@ -20,7 +21,7 @@ type Rfq = {
   stale: boolean;
   bom: { id: string; code: string };
   site: { name: string; area: string };
-  line: { line_no: number; item: { name: string; canonical_unit: string }; qty_display: string; needed_by: string; partial_allowed: boolean };
+  line: { line_no: number; qty_milli: number; item: { name: string; canonical_unit: string }; qty_display: string; needed_by: string; partial_allowed: boolean };
   match_report: {
     excluded?: { vendor: string; reason: string }[];
     warning?: string | null;
@@ -232,6 +233,7 @@ function RfqPage() {
         </p>
       )}
       <SendRfqs rfq={rfq} onChange={setRfq} />
+      <ComparisonView rfqId={rfq.id} unit={rfq.line.item.canonical_unit} qtyMilli={rfq.line.qty_milli} />
       <Quotes rfqId={rfq.id} canonicalUnit={rfq.line.item.canonical_unit} />
       <Matching rfq={rfq} onChange={setRfq} />
     </>
