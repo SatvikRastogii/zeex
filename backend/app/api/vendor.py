@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import Select, select
 
 from app.api.deps import BizClock, Db, VendorUser
 from app.channels.inbound import Inbound, receive
@@ -16,6 +16,11 @@ from app.db.models import BuilderOrg, Message, Rfq, RfqInvitation
 router = APIRouter(prefix="/vendor", tags=["vendor"])
 
 GENERAL = "general"
+
+
+def _visible(vendor_id: uuid.UUID) -> Select[Message]:
+    """What the vendor's phone would show: never messages blocked before delivery."""
+    return select(Message).where(Message.vendor_id == vendor_id, Message.status != "blocked")
 
 
 def conv_key(m: Message) -> str:
@@ -42,7 +47,7 @@ def _ordered(rows: list[Message]) -> list[Message]:
 
 @router.get("/messages")
 def my_messages(vendor: VendorUser, db: Db) -> list[dict[str, Any]]:
-    rows = list(db.scalars(select(Message).where(Message.vendor_id == vendor.id)))
+    rows = list(db.scalars(_visible(vendor.id)))
     return [_msg_out(m) for m in _ordered(rows)]
 
 
@@ -56,7 +61,7 @@ def my_message(message_id: uuid.UUID, vendor: VendorUser, db: Db) -> dict[str, A
 
 @router.get("/conversations")
 def conversations(vendor: VendorUser, db: Db) -> list[dict[str, Any]]:
-    rows = _ordered(list(db.scalars(select(Message).where(Message.vendor_id == vendor.id))))
+    rows = _ordered(list(db.scalars(_visible(vendor.id))))
     rfqs = {
         r.id: r
         for r in db.scalars(select(Rfq).where(Rfq.id.in_({m.rfq_id for m in rows if m.rfq_id})))
@@ -83,7 +88,7 @@ def conversations(vendor: VendorUser, db: Db) -> list[dict[str, Any]]:
 
 @router.get("/conversations/{key}")
 def conversation(key: str, vendor: VendorUser, db: Db) -> dict[str, Any]:
-    q = select(Message).where(Message.vendor_id == vendor.id)
+    q = _visible(vendor.id)
     if key == GENERAL:
         q = q.where(Message.rfq_id.is_(None))
     else:

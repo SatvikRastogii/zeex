@@ -292,3 +292,15 @@ def test_jobs_are_durable_rows(owner: TestClient, seeded: Session) -> None:
     r = published_rfq(owner, seeded)
     owner.post(f"/api/rfqs/{r['rfq_id']}/send")
     assert len(seeded.scalars(select(Job).where(Job.status == "pending")).all()) == 7
+
+
+def test_blocked_messages_are_not_in_the_vendor_inbox(
+    owner: TestClient, seeded: Session, biz: DbDemoClock, login: Login
+) -> None:
+    biz.advance(timedelta(hours=7))
+    r = published_rfq(owner, seeded)
+    owner.post(f"/api/rfqs/{r['rfq_id']}/send")
+    gupta = login(VENDOR_GUPTA)
+    gupta.post("/api/vendor/messages", json={"client_message_id": "stop-2", "text": "STOP"})
+    tick(biz, timedelta(hours=12))
+    assert all(m["template"] != "rfq_invite" for m in gupta.get("/api/vendor/messages").json())
