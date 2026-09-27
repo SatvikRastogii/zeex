@@ -14,6 +14,9 @@ from app.config import get_settings
 # creates an engine or writes a file.
 os.environ["DATABASE_URL"] = get_settings().test_database_url
 os.environ["STORAGE_DIR"] = tempfile.mkdtemp(prefix="zp-test-storage-")
+# No test may call a real API, even with a Gemini key in .env.
+os.environ["LLM_PROVIDER"] = "mock"
+os.environ["GEMINI_API_KEY"] = ""
 get_settings.cache_clear()
 
 from alembic import command  # noqa: E402
