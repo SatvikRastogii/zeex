@@ -52,3 +52,8 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "ruff>=0.16.9",
 ]
+
+[[tool.mypy.overrides]]
+# No bundled types; stub packages would be an extra dependency.
+module = ["openpyxl", "openpyxl.*"]
+ignore_missing_imports = true
