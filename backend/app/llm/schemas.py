@@ -57,3 +57,5 @@ class ParsedReply(_Strict):
         Literal["delivery_date", "brand", "payment_terms", "advance", "quantity"]
     ] = Field(default_factory=list)
     wants_call: bool = False
+    asks_competitor_price: bool = False  # "what is the lower rate?"
+    abusive: bool = False

@@ -14,6 +14,7 @@ from pathlib import Path
 
 from app.config import get_settings
 from app.domain.quote_text import parse_text
+from app.domain.reply_text import parse_reply_text
 from app.llm.provider import LLMRequest
 
 VISION_REGISTRY = "samples/mock_vision.json"
@@ -70,6 +71,12 @@ class MockProvider:
             ]
             doc = _between(req.prompt, "<document>", "</document>")
             return parse_text(doc, today, brands).model_dump_json(exclude_none=True)
+        if req.task == "parse_reply":
+            return parse_reply_text(_between(req.prompt, "<reply>", "</reply>")).model_dump_json(
+                exclude_none=True
+            )
+        if req.task == "write_message":
+            return _between(req.prompt, "Suggested wording: ", "\n").strip()
         raise NotImplementedError(f"mock has no behaviour for task {req.task!r}")
 
 
