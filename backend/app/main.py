@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, auth, boms, health, org, vendor
+from app.api import admin, auth, boms, health, org, rfqs, vendor
 from app.config import get_settings
 
 settings = get_settings()
@@ -25,6 +25,7 @@ for r in (
     org.router,
     boms.catalog_router,
     boms.router,
+    rfqs.router,
     vendor.router,
     admin.router,
 ):

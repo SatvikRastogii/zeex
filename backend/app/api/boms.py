@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.agents.match_runner import run_matching
 from app.api.deps import BizClock, Builder, Db, org_id, require
 from app.db.audit import audit
 from app.db.catalog import build_index
@@ -299,15 +300,14 @@ def bom_detail(db: Session, bom: Bom) -> dict[str, Any]:
 @router.get("")
 def list_boms(user: Builder, db: Db) -> list[dict[str, Any]]:
     org = org_id(user)
-    counts = dict(
-        db.execute(
+    counts: dict[uuid.UUID, int] = {
+        bom_id: n
+        for bom_id, n in db.execute(
             select(BomLine.bom_id, func.count())
             .where(BomLine.builder_org_id == org)
             .group_by(BomLine.bom_id)
         )
-        .tuples()
-        .all()
-    )
+    }
     sites = {s.id: s.name for s in db.scalars(select(Site).where(Site.builder_org_id == org))}
     boms = db.scalars(select(Bom).where(Bom.builder_org_id == org).order_by(Bom.created_at.desc()))
     return [
@@ -358,8 +358,9 @@ def publish(bom_id: uuid.UUID, user: Creator, db: Db, clock: BizClock) -> dict[s
     org = db.get(BuilderOrg, bom.builder_org_id)
     assert org is not None
     cfg = org_settings(org.settings)
-    for ln in db.scalars(select(BomLine).where(BomLine.bom_id == bom.id)):
-        db.add(
+    rfqs = []
+    for ln in db.scalars(select(BomLine).where(BomLine.bom_id == bom.id).order_by(BomLine.line_no)):
+        rfqs.append(
             Rfq(
                 builder_org_id=bom.builder_org_id,
                 bom_line_id=ln.id,
@@ -369,6 +370,10 @@ def publish(bom_id: uuid.UUID, user: Creator, db: Db, clock: BizClock) -> dict[s
                 shortlist_size=cfg["shortlist_size"],
             )
         )
+    db.add_all(rfqs)
+    db.flush()
+    for rfq in rfqs:  # match vendors for every line straight away
+        run_matching(db, clock, rfq, actor=f"user:{user.id}")
     db.commit()
     return bom_detail(db, bom)
 
