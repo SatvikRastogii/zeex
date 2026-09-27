@@ -45,6 +45,7 @@ export default function Approval({
   const [threads, setThreads] = useState<Thread[]>([]);
   const [orders, setOrders] = useState<WorkOrder[]>([]);
   const [override, setOverride] = useState(false);
+  const [other, setOther] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -88,6 +89,8 @@ export default function Approval({
   const total = (r?: Ranked) => (r?.landed_paise ? Math.round((r.landed_paise * qtyMilli) / 1000) : 0);
   const opening = (r?: Ranked) => threads.find((t) => t.vendor_id === r?.vendor_id)?.opening_offer_paise ?? null;
   const anyAboveMax = (rec?.ranked ?? []).some((r) => r.above_max && r.qualified);
+  // Any other qualified vendor who can supply everything (for a runner-up or a capacity conflict).
+  const others = (rec?.ranked ?? []).filter((r) => r.qualified && r.can_cover_alone && r.vendor_id !== rec?.l1_vendor_id);
 
   if (orders.length > 0 && status !== "awaiting_approval") {
     return (
@@ -192,6 +195,24 @@ export default function Approval({
               Approve split
             </button>
           )}{" "}
+          {others.length > 0 && (
+            <>
+              <label htmlFor="other-vendor" style={{ display: "inline" }} className="small">
+                or approve
+              </label>{" "}
+              <select id="other-vendor" value={other} onChange={(e) => setOther(e.target.value)}>
+                <option value="">another vendor...</option>
+                {others.map((r) => (
+                  <option key={r.vendor_id} value={r.vendor_id}>
+                    {r.vendor} ({formatINR(r.landed_paise ?? 0)}/{unit})
+                  </option>
+                ))}
+              </select>{" "}
+              <button type="button" className="secondary" disabled={busy || !other} onClick={() => approve(other)}>
+                Approve selected
+              </button>{" "}
+            </>
+          )}
           <button type="button" className="secondary" disabled={busy} onClick={() => act(`/rfqs/${rfqId}/compare-again`)}>
             Compare again
           </button>{" "}

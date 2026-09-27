@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import Guard from "../guard";
+import DemoTools from "./demo";
 
 type Job = { id: string; kind: string; run_at_display: string; attempts: number; last_error: string[] | null; payload: Record<string, unknown> };
 type Event = { at_display: string; actor: string; action: string; entity: string };
@@ -65,8 +66,10 @@ function Panel() {
           </button>
         </p>
         {note && <p className="small">{note}</p>}
-        <p className="small muted">Moving the clock runs every job that becomes due, in order. The clock never goes back; use Reset (Stage 12) to start over.</p>
+        <p className="small muted">Moving the clock runs every job that becomes due, in order. The clock never goes back; use Reset to start over.</p>
       </div>
+
+      <DemoTools onChange={() => void Promise.all([load(), refresh()])} />
 
       <h2>Pending jobs ({jobs.length})</h2>
       <table>
