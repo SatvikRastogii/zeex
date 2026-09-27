@@ -1,5 +1,5 @@
 SHELL := bash
-.PHONY: env install db dev test lint fmt stop
+.PHONY: env install db migrate seed reset dev test lint fmt stop
 
 env:
 	@test -f .env || { cp .env.example .env; echo "created .env from .env.example"; }
@@ -11,8 +11,19 @@ install: env
 db:
 	docker compose up -d --wait db
 
+migrate: db
+	cd backend && uv run alembic upgrade head
+
+seed: migrate
+	cd backend && uv run python -m app.seed.run
+
+# Wipes the dev database schema and reseeds. Demo data only.
+reset: db
+	cd backend && uv run alembic downgrade base && uv run alembic upgrade head
+	cd backend && uv run python -m app.seed.run
+
 # Starts Postgres, the API on :8000 and the UI on :3000. Ctrl-C stops both.
-dev: install db
+dev: install migrate
 	@trap 'kill 0' EXIT; \
 	(cd backend && uv run uvicorn app.main:app --reload --port 8000) & \
 	(cd frontend && pnpm dev) & \
