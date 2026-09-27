@@ -8,6 +8,7 @@ import { formatDate, formatIST, statusTag } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import Guard from "../../guard";
 import ComparisonView from "./comparison";
+import Negotiations from "./negotiations";
 import Quotes from "./quotes";
 
 type ShortlistRow = { vendor_id: string; vendor: string; score: number; reason: string; added_by_builder: boolean; status: string };
@@ -233,6 +234,7 @@ function RfqPage() {
         </p>
       )}
       <SendRfqs rfq={rfq} onChange={setRfq} />
+      <Negotiations rfqId={rfq.id} />
       <ComparisonView rfqId={rfq.id} unit={rfq.line.item.canonical_unit} qtyMilli={rfq.line.qty_milli} />
       <Quotes rfqId={rfq.id} canonicalUnit={rfq.line.item.canonical_unit} />
       <Matching rfq={rfq} onChange={setRfq} />
