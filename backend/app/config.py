@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     gemini_write_model: str = ""
     storage_dir: Path = ROOT / "storage"
     frontend_origin: str = "http://localhost:3000"
+    cookie_secure: bool = False  # True behind HTTPS
     log_level: str = "INFO"
 
 

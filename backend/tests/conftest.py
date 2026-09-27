@@ -30,9 +30,12 @@ def _schema() -> None:
 
 
 def _truncate() -> None:
-    names = ", ".join(t.name for t in Base.metadata.sorted_tables)
+    """Empty every table. DELETE with triggers off (replica role) is much faster than
+    TRUNCATE on small tables, and bypasses the audit_log guard for test cleanup only."""
     with get_engine().begin() as conn:
-        conn.execute(text(f"TRUNCATE {names} RESTART IDENTITY CASCADE"))
+        conn.execute(text("SET LOCAL session_replication_role = replica"))
+        for table in reversed(Base.metadata.sorted_tables):
+            conn.execute(table.delete())
         for seq in ("bom_code_seq", "quote_code_seq", "neg_code_seq", "po_code_seq"):
             conn.execute(text(f"ALTER SEQUENCE {seq} RESTART"))
 
@@ -42,4 +45,47 @@ def db() -> Iterator[Session]:
     _truncate()
     with sessionmaker(get_engine(), expire_on_commit=False)() as s:
         yield s
-    _truncate()
+
+
+# --- API fixtures -------------------------------------------------------------------
+
+from collections.abc import Callable  # noqa: E402
+from datetime import UTC, datetime  # noqa: E402
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from app.api.deps import get_wall_clock  # noqa: E402
+from app.jobs.clock import FixedClock  # noqa: E402
+from app.main import app  # noqa: E402
+from app.seed.run import seed_static  # noqa: E402
+
+
+@pytest.fixture
+def seeded(db: Session) -> Session:
+    """Orgs, users, sites, catalog and vendors (no history)."""
+    seed_static(db, FixedClock(datetime(2026, 9, 25, 8, 35, tzinfo=UTC)))
+    db.commit()
+    return db
+
+
+@pytest.fixture
+def wall() -> Iterator[FixedClock]:
+    """Controllable wall clock for auth (OTP and session expiry)."""
+    clock = FixedClock(datetime(2026, 9, 25, 8, 35, tzinfo=UTC))
+    app.dependency_overrides[get_wall_clock] = lambda: clock
+    yield clock
+    app.dependency_overrides.pop(get_wall_clock, None)
+
+
+@pytest.fixture
+def login(seeded: Session, wall: FixedClock) -> Callable[[str], TestClient]:
+    """login(phone) -> a TestClient holding that principal's session cookie."""
+
+    def _login(phone: str) -> TestClient:
+        c = TestClient(app)
+        code = c.post("/api/auth/otp/request", json={"phone": phone}).json()["demo_otp"]
+        r = c.post("/api/auth/otp/verify", json={"phone": phone, "code": code})
+        assert r.status_code == 200, r.text
+        return c
+
+    return _login
