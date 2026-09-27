@@ -13,11 +13,15 @@ from app.db.models import CapacityReservation, NegotiationThread, Quote, Vendor
 from app.demo.autoreply import settings
 from app.demo.load import run
 from app.demo.scenarios import ADMIN, ARORA, GREENLINE, SHARMA, Driver
+from app.seed.run import recompute_ratings, seed_history
 from tests.conftest import DbDemoClock
 
 
 @pytest.fixture
 def loaded(seeded: Session, biz: DbDemoClock) -> dict[str, Any]:
+    seed_history(seeded, biz)  # as `make reset`: history shapes vendor ratings, which decide L1
+    recompute_ratings(seeded)
+    seeded.commit()
     return run(["1", "2", "3", "4", "5", "6", "7"])
 
 

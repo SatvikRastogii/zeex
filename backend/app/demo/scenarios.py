@@ -191,11 +191,11 @@ def happy_path(d: Driver) -> dict[str, Any]:
     d.settle()
     # Round 2
     d.say(DELHI, rfq, "385")
-    d.say(BALAJI, rfq, "392")
+    d.say(BALAJI, rfq, "400")
     d.settle()
     # Round 3: best and final
     d.say(DELHI, rfq, "380 final")
-    d.say(BALAJI, rfq, "388 last rate")
+    d.say(BALAJI, rfq, "398 last rate")
     d.settle()
     return {"rfq": rfq, "status": d.status(SHARMA, rfq)}
 
