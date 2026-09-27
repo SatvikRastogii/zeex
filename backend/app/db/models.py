@@ -211,6 +211,7 @@ class Bom(Row):
     source: Mapped[str] = mapped_column(Text, default="manual")  # upload | manual | voice
     original_file_ref: Mapped[str | None] = mapped_column(Text)
     title: Mapped[str | None] = mapped_column(Text)
+    client_ref: Mapped[str | None] = mapped_column(Text, unique=True)  # idempotent create
     version: Mapped[int] = mapped_column(default=1)
 
     __mapper_args__ = {"version_id_col": version}
@@ -224,6 +225,8 @@ class BomLine(Row):
     line_no: Mapped[int]
     catalog_item_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("catalog_items.id"))
     raw_text: Mapped[str] = mapped_column(Text)
+    spec: Mapped[str | None] = mapped_column(Text)
+    notes: Mapped[str | None] = mapped_column(Text)
     qty_canonical_milli: Mapped[int] = mapped_column(BigInteger)
     unit: Mapped[str] = mapped_column(Text)  # unit as entered
     qty_entered: Mapped[str] = mapped_column(Text)  # quantity as entered

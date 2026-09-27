@@ -79,3 +79,12 @@ def price_per_canonical_paise(
     """A price per price_unit restated per canonical unit (exact; round at the end)."""
     # ₹P per tonne, canonical bag: 1 bag = 1/20 tonne, so ₹P/20 per bag.
     return price_paise * conversion_factor(canonical_unit, price_unit, conversions)
+
+
+def format_qty(milli: int, unit: str) -> str:
+    """30000, 'bag' -> '30 bag'; 2500, 'tonne' -> '2.5 tonne'; 1500000 -> '1,500 bag'."""
+    whole, frac = divmod(milli, MILLI)
+    text = f"{whole:,}"
+    if frac:
+        text += "." + f"{frac:03d}".rstrip("0")
+    return f"{text} {unit}"
