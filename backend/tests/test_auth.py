@@ -160,3 +160,9 @@ def test_deactivated_user_loses_session_and_cannot_request(login: Login, seeded:
 def test_vendor_login(login: Login) -> None:
     me = login(VENDOR_BALAJI).get("/api/auth/me").json()
     assert me["kind"] == "vendor" and me["name"] == "Shree Balaji Cement Traders"
+
+
+def test_demo_accounts_listed_in_demo_mode(c: TestClient) -> None:
+    rows = c.get("/api/auth/demo-accounts").json()
+    roles = {r["role"] for r in rows}
+    assert {"admin", "owner", "purchase_manager", "site_engineer", "vendor"} <= roles

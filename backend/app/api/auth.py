@@ -3,11 +3,12 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, field_validator
+from sqlalchemy import select
 
 from app.api.deps import COOKIE, SESSION_TTL, CurrentPrincipal, Db, WallClock, issue_token
 from app.auth.otp import OtpError, RateLimited, request_otp, verify_otp
 from app.config import get_settings
-from app.db.models import AuthSession, BuilderOrg
+from app.db.models import AuthSession, BuilderOrg, User, Vendor
 from app.domain.phone import normalize_phone
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -86,3 +87,22 @@ def me(p: CurrentPrincipal, db: Db) -> dict[str, Any]:
         "role": p.user.role,
         "org": {"id": str(org.id), "name": org.name} if org else None,
     }
+
+
+@router.get("/demo-accounts")
+def demo_accounts(db: Db) -> list[dict[str, str]]:
+    """Demo mode only: the seeded logins, so the login screen can list them."""
+    if not get_settings().demo_mode:
+        raise HTTPException(404, "Not found")
+    orgs = {o.id: o.name for o in db.scalars(select(BuilderOrg))}
+    users = db.scalars(select(User).where(User.is_active).order_by(User.phone))
+    out = [
+        {"phone": u.phone, "name": u.name, "role": u.role,
+         "org": orgs.get(u.builder_org_id, "Platform") if u.builder_org_id else "Platform"}
+        for u in users
+    ]  # fmt: skip
+    vendors = db.scalars(select(Vendor).order_by(Vendor.phone))
+    out += [
+        {"phone": v.phone, "name": v.display_name, "role": "vendor", "org": ""} for v in vendors
+    ]
+    return out
