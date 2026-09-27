@@ -54,13 +54,15 @@ def db() -> Iterator[Session]:
 # --- API fixtures -------------------------------------------------------------------
 
 from collections.abc import Callable  # noqa: E402
-from datetime import UTC, datetime  # noqa: E402
+from datetime import UTC, datetime, timedelta  # noqa: E402
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.api.deps import COOKIE, get_clock, get_wall_clock, issue_token  # noqa: E402
+from app.api.deps import COOKIE, get_wall_clock, issue_token  # noqa: E402
 from app.auth.otp import find_subject  # noqa: E402
+from app.db.models import DemoClockState  # noqa: E402
 from app.jobs.clock import FixedClock  # noqa: E402
+from app.jobs.demo_clock import advance, load_clock  # noqa: E402
 from app.main import app  # noqa: E402
 from app.seed.run import seed_static  # noqa: E402
 
@@ -101,17 +103,34 @@ def wall() -> Iterator[FixedClock]:
 BIZ_START = datetime(2026, 9, 25, 8, 35, tzinfo=UTC)  # 25 Sep 2026 14:05 IST
 
 
-@pytest.fixture
-def biz() -> Iterator[FixedClock]:
-    """Controllable business clock (what the demo clock drives)."""
-    clock = FixedClock(BIZ_START)
-    app.dependency_overrides[get_clock] = lambda: clock
-    yield clock
-    app.dependency_overrides.pop(get_clock, None)
+class DbDemoClock:
+    """The real demo clock (offset row in the database), started at BIZ_START.
+
+    API, jobs and admin clock controls all read the same offset, as in the demo."""
+
+    def now(self) -> datetime:
+        with sessionmaker(get_engine())() as s:
+            return load_clock(s).now()
+
+    def advance(self, delta: timedelta) -> None:
+        with sessionmaker(get_engine())() as s:
+            advance(s, delta)
 
 
 @pytest.fixture
-def login(seeded: Session, wall: FixedClock, biz: FixedClock) -> Callable[[str], TestClient]:
+def biz(seeded: Session) -> DbDemoClock:
+    """Business clock at BIZ_START (plus the few seconds the test takes)."""
+    state = seeded.get(DemoClockState, 1)
+    if state is None:
+        state = DemoClockState(id=1, offset_seconds=0)
+        seeded.add(state)
+    state.offset_seconds = int((BIZ_START - datetime.now(UTC)).total_seconds())
+    seeded.commit()
+    return DbDemoClock()
+
+
+@pytest.fixture
+def login(seeded: Session, wall: FixedClock, biz: DbDemoClock) -> Callable[[str], TestClient]:
     """login(phone) -> a TestClient holding that principal's session cookie."""
 
     def _login(phone: str) -> TestClient:

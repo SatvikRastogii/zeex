@@ -18,6 +18,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Identity,
     Index,
     Integer,
     Text,
@@ -486,6 +487,8 @@ class PriceHistory(Row):
 class Job(Row):
     __tablename__ = "jobs"
 
+    # Insert order, so jobs enqueued in one transaction keep their order.
+    seq: Mapped[int] = mapped_column(BigInteger, Identity(), unique=True)
     kind: Mapped[str] = mapped_column(Text)
     run_at: Mapped[datetime]
     payload: Mapped[dict[str, Any]] = mapped_column(default=dict)

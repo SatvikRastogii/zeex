@@ -12,9 +12,10 @@ from sqlalchemy.orm import Session
 
 from app.auth.permissions import BUILDER_ROLES, can
 from app.config import get_settings
-from app.db.models import AuthSession, DemoClockState, User, Vendor
+from app.db.models import AuthSession, User, Vendor
 from app.db.session import get_db
-from app.jobs.clock import Clock, DemoClock, SystemClock
+from app.jobs.clock import Clock, SystemClock
+from app.jobs.demo_clock import load_clock
 
 COOKIE = "zp_session"
 SESSION_TTL = timedelta(hours=12)
@@ -29,10 +30,7 @@ def get_wall_clock() -> Clock:
 
 def get_clock(db: Db) -> Clock:
     """Business time: the demo clock in demo mode."""
-    if not get_settings().demo_mode:
-        return SystemClock()
-    state = db.get(DemoClockState, 1)
-    return DemoClock(timedelta(seconds=state.offset_seconds if state else 0))
+    return load_clock(db)
 
 
 WallClock = Annotated[Clock, Depends(get_wall_clock)]
