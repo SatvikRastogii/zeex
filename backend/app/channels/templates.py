@@ -103,6 +103,14 @@ TEMPLATES: dict[str, Template] = {
             ("Confirm", "Decline"),
         ),
         Template(
+            "rfq_cancelled",
+            "utility",
+            {
+                "en": "{rfq_code} has been cancelled by the buyer. Thank you for your time; no action is needed.",
+                "hi": "{rfq_code} खरीदार ने रद्द कर दिया है। आपके समय के लिए धन्यवाद, कुछ करने की ज़रूरत नहीं है।",
+            },
+        ),
+        Template(
             "not_selected",
             "utility",
             {

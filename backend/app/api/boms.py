@@ -12,11 +12,26 @@ from sqlalchemy.orm import Session
 
 from app.agents.match_runner import run_matching
 from app.agents.outreach import schedule_rfq_update
+from app.agents.work_orders import cancel_po
 from app.api.deps import BizClock, Builder, Db, org_id, require
+from app.channels.base import Outbound
+from app.channels.simulated import get_channel
 from app.db.audit import audit
 from app.db.catalog import build_index
 from app.db.ids import next_code, rfq_code
-from app.db.models import Bom, BomLine, BuilderOrg, CatalogItem, Rfq, Site, User
+from app.db.models import (
+    Bom,
+    BomLine,
+    BuilderOrg,
+    CatalogItem,
+    NegotiationThread,
+    Rfq,
+    RfqInvitation,
+    Site,
+    User,
+    Vendor,
+    WorkOrder,
+)
 from app.db.tenancy import get_owned
 from app.domain.bom_rows import (
     MAX_FILE_BYTES,
@@ -28,7 +43,7 @@ from app.domain.bom_rows import (
     validate_rows,
 )
 from app.domain.settings import org_settings
-from app.domain.states import InvalidTransition, transition
+from app.domain.states import InvalidTransition, can_transition, transition
 from app.domain.units import format_qty
 from app.files import get_file_store
 from app.jobs.clock import Clock, ist_today
@@ -473,13 +488,44 @@ def cancel(bom_id: uuid.UUID, user: Creator, db: Db, clock: BizClock) -> dict[st
     try:
         transition(db, clock, "bom", bom, "cancelled", actor=f"user:{user.id}")
     except InvalidTransition:
-        raise HTTPException(409, f"A {bom.status} BOM cannot be cancelled") from None
+        msg = (
+            "cancel its work orders instead"
+            if bom.status == "awarded"
+            else "it cannot be cancelled"
+        )
+        raise HTTPException(409, f"This BOM is {bom.status}; {msg}") from None
+    actor = f"user:{user.id}"
     for rfq in db.scalars(
         select(Rfq).join(BomLine, Rfq.bom_line_id == BomLine.id).where(BomLine.bom_id == bom.id)
     ):
-        if rfq.status not in {"cancelled", "closed", "failed"}:
-            transition(
-                db, clock, "rfq", rfq, "cancelled", actor=f"user:{user.id}", reason="BOM cancelled"
-            )
+        if rfq.status in {"cancelled", "closed", "failed"}:
+            continue
+        # Negotiations stop, queued invites are dropped, issued POs are cancelled (capacity freed).
+        for t in db.scalars(select(NegotiationThread).where(NegotiationThread.rfq_id == rfq.id)):
+            if t.state != "closed":
+                transition(
+                    db,
+                    clock,
+                    "negotiation",
+                    t,
+                    "closed",
+                    actor=actor,
+                    field="state",
+                    reason="BOM cancelled",
+                )
+        told = set()
+        for wo in db.scalars(select(WorkOrder).where(WorkOrder.rfq_id == rfq.id)):
+            if can_transition("work_order", wo.status, "cancelled"):
+                cancel_po(db, clock, wo, actor, "BOM cancelled")
+                told.add(wo.vendor_id)
+        for inv in db.scalars(select(RfqInvitation).where(RfqInvitation.rfq_id == rfq.id)):
+            if inv.status == "queued":
+                inv.status = "cancelled"
+            elif inv.status in ("invited", "responded") and inv.vendor_id not in told:
+                vendor = db.get(Vendor, inv.vendor_id)
+                assert vendor is not None
+                get_channel().send(db, clock, Outbound(vendor=vendor, template="rfq_cancelled", params={"rfq_code": rfq.public_code},
+                                                       org_id=rfq.builder_org_id, rfq_id=rfq.id))  # fmt: skip
+        transition(db, clock, "rfq", rfq, "cancelled", actor=actor, reason="BOM cancelled")
     db.commit()
     return bom_detail(db, bom)
