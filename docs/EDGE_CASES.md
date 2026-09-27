@@ -136,8 +136,31 @@ Filled in stage by stage; gaps are listed at the bottom with a reason.
 | Double-submitted form / re-run parse job | One quote | `test_quotes.py::test_form_submission_is_idempotent`, `::test_every_parse_is_idempotent` |
 | Quote on an RFQ not invited to; another org's quotes | 404 | `test_quotes.py::test_vendor_cannot_quote_on_rfq_not_invited`, `::test_quotes_cross_tenant_404` |
 
+## Evaluation, shortlist and big orders (Stage 8)
+
+| Case | Behaviour | Test |
+|---|---|---|
+| ₹360 + ₹25 freight vs ₹375 delivered | ₹385 vs ₹375 landed; delivered wins | `test_evaluation.py::test_freight_quote_vs_delivered_quote` |
+| GST mode incl/excl | GST added or removed only as needed | `test_evaluation.py::test_gst_added_only_when_comparing_incl_and_quote_excludes` |
+| Rounding | Exact until one final half-up rounding | `test_evaluation.py::test_rounding_happens_once_at_the_end` |
+| Weights must sum to 100 | Refused (API 422; engine assertion) | `test_evaluation.py::test_weights_must_sum_to_100`, `test_permissions.py::test_weights_must_sum_to_100` |
+| Disqualification reasons | Needed-by, no date, expired/short validity, part qty without partial, unit, wrong item | `test_evaluation.py::test_disqualification_reasons`, `test_evaluation_api.py::test_bid_close_scores_and_recommends` |
+| Tie-breaks | Landed, delivery, rating, quote time | `test_evaluation.py::test_tie_breaks_landed_then_delivery_then_rating_then_time` |
+| L1 differs from lowest price | Both marked | `test_evaluation.py::test_l1_by_score_can_differ_from_lowest_price` |
+| Above max price | Flagged, not hidden, not L1 without override | `test_evaluation.py::test_above_max_is_flagged_not_hidden`, `test_evaluation_api.py::test_max_price_flags_and_excludes_from_l1` |
+| Split award across capacity-limited vendors | Allocated by score within capacity; covers full qty | `test_evaluation.py::test_split_across_capacity_limited_vendors`, `test_evaluation_api.py::test_big_order_split_award` |
+| Minimum order in split | Vendor skipped with reason | `test_evaluation.py::test_split_skips_vendor_below_minimum_order` |
+| Shortfall | Reported with options, never silently short | `test_evaluation.py::test_shortfall_reported_with_options`, `test_evaluation_api.py::test_big_order_shortfall` |
+| Fewer than 2 quotes | Window extended once, builder notified, vendors reminded | `test_evaluation_api.py::test_one_quote_extends_window_once_then_goes_to_builder_without_negotiation` |
+| Single quote after extension | No negotiation implying competition; straight to approval | same test |
+| No quotes after extension | `insufficient_quotes` | `test_evaluation_api.py::test_no_quotes_after_extension_is_insufficient` |
+| Hidden-instruction quote | Ranking unaffected | `test_evaluation_api.py::test_hidden_instruction_quote_does_not_change_ranking` |
+| Weight change | Re-score changes the order | `test_evaluation_api.py::test_weight_change_rescores` |
+| Clock jump replay | Each job runs at its own time | `test_jobs.py::test_catch_up_runs_each_job_at_its_own_time` |
+
 ## Gaps
 
 | Case | Reason |
 |---|---|
 | Live Gemini parsing | No API key available in this environment; the provider is implemented against the documented REST API but only the mock is exercised by tests. |
+| Brand-specific BOM lines | BOM lines have no brand field; grade is enforced through the catalog item. Add a brand column if clients need brand-locked lines. |

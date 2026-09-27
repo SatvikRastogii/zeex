@@ -48,8 +48,15 @@
 - Six generated sample documents (clean, arithmetic error, rate list, photo, scanned PDF, hidden instructions).
 - UI: working quote form, attachments and sample sender in the Vendor Inbox; "Quotes received" table with flags and the original document shown next to the parsed values.
 
+## Stage 8: Evaluation, shortlist and big orders (done)
+- Pure rules (`domain/evaluation.py`): landed cost, disqualification, weighted scoring with tie-breaks, L1 vs lowest price, max-price flag, split award with capacity and minimum orders, shortfall.
+- Evaluation agent: runs at bid close, stores a Recommendation, shortlists the top 3; extends thin windows once; single quote goes to the builder without negotiation.
+- Endpoints: comparison, score again, private target/max limits.
+- UI: Quotes comparison (ranked table with score parts and marks, split/shortfall box, private limits).
+- Fixed: clock-jump catch-up now runs each job at its scheduled time.
+
 ## Next
-Stage 8: evaluation, shortlist and big orders.
+Stage 9: negotiation agent.
 
 ## Known gaps
 - `make demo` arrives with the demo panel (Stage 12).
