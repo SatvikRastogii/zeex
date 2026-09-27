@@ -84,6 +84,17 @@ class OtpChallenge(Row):
     consumed_at: Mapped[datetime | None]
 
 
+class AuthSession(Row):
+    """Server-side session so logout and expiry are enforced even with a valid JWT."""
+
+    __tablename__ = "sessions"
+
+    subject_kind: Mapped[str] = mapped_column(Text)  # user | vendor
+    subject_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    expires_at: Mapped[datetime]
+    revoked_at: Mapped[datetime | None]
+
+
 class Site(Row):
     __tablename__ = "sites"
 
