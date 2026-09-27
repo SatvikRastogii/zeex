@@ -30,7 +30,7 @@ def invite(vendor: Vendor) -> Outbound:
 
 def test_template_sent_and_delivered(seeded: Session, vendor: Vendor) -> None:
     m = get_channel().send(seeded, FixedClock(T0), invite(vendor))
-    assert m.status == "sent" and m.delivered_at == T0 and "RFQ RFQ-1" in m.body
+    assert m.status == "sent" and m.delivered_at == T0 and "RFQ-1: Cement" in m.body and "RFQ RFQ" not in m.body
     assert m.payload["buttons"] == ["Submit quote"]
 
 

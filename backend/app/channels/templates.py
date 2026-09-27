@@ -31,10 +31,10 @@ TEMPLATES: dict[str, Template] = {
             "rfq_invite",
             "utility",
             {
-                "en": "{builder} requests a quotation.\nRFQ {rfq_code}: {item}, {qty}, delivery to {area} "
+                "en": "{builder} requests a quotation.\n{rfq_code}: {item}, {qty}, delivery to {area} "
                 "by {needed_by}.\nQuotes close {closes_at}.\nTap Submit quote, reply with your rate, "
                 "or send your quotation as a PDF or photo.",
-                "hi": "{builder} कोटेशन मांग रहे हैं।\nRFQ {rfq_code}: {item}, {qty}, {area} में {needed_by} "
+                "hi": "{builder} कोटेशन मांग रहे हैं।\n{rfq_code}: {item}, {qty}, {area} में {needed_by} "
                 "तक डिलीवरी।\nकोटेशन {closes_at} तक भेजें।\n'Submit quote' दबाएं, अपना रेट लिखें, "
                 "या कोटेशन PDF/फोटो भेजें।",
             },
@@ -44,8 +44,8 @@ TEMPLATES: dict[str, Template] = {
             "bid_reminder",
             "utility",
             {
-                "en": "Reminder: quotes for RFQ {rfq_code} ({item}, {qty}) close {closes_at}.",
-                "hi": "याद दिलाना: RFQ {rfq_code} ({item}, {qty}) के कोटेशन {closes_at} को बंद होंगे।",
+                "en": "Reminder: quotes for {rfq_code} ({item}, {qty}) close {closes_at}.",
+                "hi": "याद दिलाना: {rfq_code} ({item}, {qty}) के कोटेशन {closes_at} को बंद होंगे।",
             },
             ("Submit quote",),
         ),
@@ -53,18 +53,18 @@ TEMPLATES: dict[str, Template] = {
             "bid_closed",
             "utility",
             {
-                "en": "Quotes for RFQ {rfq_code} are now closed. Thank you. We will contact you if your "
+                "en": "Quotes for {rfq_code} are now closed. Thank you. We will contact you if your "
                 "quote is shortlisted.",
-                "hi": "RFQ {rfq_code} के कोटेशन अब बंद हैं। धन्यवाद। आपका कोटेशन चुने जाने पर हम संपर्क करेंगे।",
+                "hi": "{rfq_code} के कोटेशन अब बंद हैं। धन्यवाद। आपका कोटेशन चुने जाने पर हम संपर्क करेंगे।",
             },
         ),
         Template(
             "rfq_update",
             "utility",
             {
-                "en": "Update to RFQ {rfq_code}: now {item}, {qty}, needed by {needed_by}. Please revise "
+                "en": "Update to {rfq_code}: now {item}, {qty}, needed by {needed_by}. Please revise "
                 "your quote if needed. Quotes close {closes_at}.",
-                "hi": "RFQ {rfq_code} में बदलाव: अब {item}, {qty}, {needed_by} तक चाहिए। ज़रूरत हो तो "
+                "hi": "{rfq_code} में बदलाव: अब {item}, {qty}, {needed_by} तक चाहिए। ज़रूरत हो तो "
                 "कोटेशन बदलें। कोटेशन {closes_at} को बंद होंगे।",
             },
             ("Submit quote",),
@@ -73,22 +73,22 @@ TEMPLATES: dict[str, Template] = {
             "quote_confirm",
             "utility",
             {
-                "en": "We read your quote for RFQ {rfq_code}: {summary}. Is this correct?",
-                "hi": "RFQ {rfq_code} के लिए आपका कोटेशन हमने ऐसे पढ़ा: {summary}। क्या यह सही है?",
+                "en": "We read your quote for {rfq_code}: {summary}. Is this correct?",
+                "hi": "{rfq_code} के लिए आपका कोटेशन हमने ऐसे पढ़ा: {summary}। क्या यह सही है?",
             },
             ("Yes", "Edit"),
         ),
         Template(
             "counter_offer",
             "utility",
-            {"en": "RFQ {rfq_code}: {message}", "hi": "RFQ {rfq_code}: {message}"},
+            {"en": "{rfq_code}: {message}", "hi": "{rfq_code}: {message}"},
         ),
         Template(
             "award_notice",
             "utility",
             {
-                "en": "Your quote for RFQ {rfq_code} has been selected. The work order follows.",
-                "hi": "RFQ {rfq_code} के लिए आपका कोटेशन चुना गया है। वर्क ऑर्डर जल्द भेजा जाएगा।",
+                "en": "Your quote for {rfq_code} has been selected. The work order follows.",
+                "hi": "{rfq_code} के लिए आपका कोटेशन चुना गया है। वर्क ऑर्डर जल्द भेजा जाएगा।",
             },
         ),
         Template(
@@ -106,8 +106,8 @@ TEMPLATES: dict[str, Template] = {
             "not_selected",
             "utility",
             {
-                "en": "Thank you for quoting on RFQ {rfq_code}. Another offer was selected this time.",
-                "hi": "RFQ {rfq_code} पर कोटेशन देने के लिए धन्यवाद। इस बार दूसरा ऑफ़र चुना गया।",
+                "en": "Thank you for quoting on {rfq_code}. Another offer was selected this time.",
+                "hi": "{rfq_code} पर कोटेशन देने के लिए धन्यवाद। इस बार दूसरा ऑफ़र चुना गया।",
             },
         ),
         Template(
