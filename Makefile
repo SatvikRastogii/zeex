@@ -1,5 +1,5 @@
 SHELL := bash
-.PHONY: env install db migrate seed reset dev test lint fmt stop
+.PHONY: env install db migrate seed reset demo dev test lint fmt stop
 
 env:
 	@test -f .env || { cp .env.example .env; echo "created .env from .env.example"; }
@@ -21,6 +21,11 @@ seed: migrate
 reset: db
 	cd backend && uv run alembic downgrade base && uv run alembic upgrade head
 	cd backend && uv run python -m app.seed.run
+
+# Plays all seven demo scenarios to their demo points (see docs/DEMO_SCRIPT.md).
+# Use after `make reset` for a clean run; running it again adds another set.
+demo: seed
+	cd backend && uv run python -m app.demo.load --all
 
 # Starts Postgres, the API on :8000, the job worker and the UI on :3000. Ctrl-C stops all.
 dev: install migrate
