@@ -9,15 +9,12 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import Select, select
 
-from app.agents.quote_intake import form_quote
+from app.agents.quote_intake import form_quote, receive_file
 from app.agents.quote_parser import MAX_FILE_BYTES, VENDOR_MESSAGES
 from app.api.deps import BizClock, Db, VendorUser
-from app.channels.base import Outbound
 from app.channels.inbound import Inbound, receive
-from app.channels.simulated import get_channel
 from app.config import get_settings
 from app.db.models import BuilderOrg, Message, Rfq, RfqInvitation, Vendor
-from app.files import get_file_store
 from app.jobs.clock import ist_today
 from app.llm.schemas import ParsedQuote
 from app.seed.sample_docs import build as build_samples
@@ -217,46 +214,6 @@ def submit_form(body: QuoteForm, vendor: VendorUser, db: Db, clock: BizClock) ->
     return {"quote_id": str(q.id), "code": q.public_code, "status": q.status, "flags": q.flags}
 
 
-def _receive_file(
-    db: Db,
-    clock: BizClock,
-    vendor: Vendor,
-    rfq: Rfq | None,
-    data: bytes,
-    filename: str,
-    client_id: str,
-    caption: str,
-) -> Message:
-    too_big = len(data) > MAX_FILE_BYTES
-    ref = None if too_big else get_file_store().save(f"quotes/{vendor.id}", filename, data)
-    msg, created = receive(
-        db,
-        clock,
-        Inbound(
-            vendor=vendor,
-            client_message_id=client_id,
-            text=caption,
-            rfq_id=rfq.id if rfq else None,
-            org_id=rfq.builder_org_id if rfq else None,
-            payload={"file_ref": ref, "filename": filename, "size": len(data)}
-            if ref
-            else {"filename": filename, "size": len(data)},
-        ),
-    )
-    if created and too_big:
-        get_channel().send(
-            db,
-            clock,
-            Outbound(
-                vendor=vendor,
-                text=VENDOR_MESSAGES["too_large"],
-                org_id=msg.builder_org_id,
-                rfq_id=msg.rfq_id,
-            ),
-        )
-    return msg
-
-
 @router.post("/files")
 async def upload_file(
     request: Request,
@@ -273,7 +230,7 @@ async def upload_file(
     data = await request.body()
     if len(data) > MAX_FILE_BYTES + 1024 * 1024:
         raise HTTPException(413, VENDOR_MESSAGES["too_large"])
-    msg = _receive_file(
+    msg = receive_file(
         db, clock, vendor, rfq, data, filename[:120], client_message_id, caption[:500]
     )
     db.commit()
@@ -306,6 +263,6 @@ def send_sample(
     if sample is None:
         raise HTTPException(404, "Not found")
     rfq = _invited_rfq(db, vendor, rfq_id)
-    msg = _receive_file(db, clock, vendor, rfq, sample.data, sample.filename, client_message_id, "")
+    msg = receive_file(db, clock, vendor, rfq, sample.data, sample.filename, client_message_id, "")
     db.commit()
     return {"message": _msg_out(msg)}

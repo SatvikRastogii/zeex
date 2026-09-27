@@ -2,6 +2,7 @@
 
 import logging
 import uuid
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -32,6 +33,10 @@ def window_open(db: Session, vendor_id: uuid.UUID, now: datetime) -> bool:
 
 def language(vendor: Vendor) -> str:
     return vendor.languages[0] if vendor.languages else "en"
+
+
+# Called after every delivered outbound message (the demo's persona auto-reply hooks in here).
+OUTBOUND_HOOKS: list[Callable[[Session, Clock, Message], None]] = []
 
 
 class SimulatedWhatsAppChannel:
@@ -88,6 +93,9 @@ class SimulatedWhatsAppChannel:
                 org_id=msg.org_id,
                 after={"vendor": v.display_name, "template": msg.template},
             )
+        else:
+            for hook in OUTBOUND_HOOKS:
+                hook(db, clock, m)
         return m
 
 

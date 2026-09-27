@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agents.quote_parser import (
+    MAX_FILE_BYTES,
     VENDOR_MESSAGES,
     DocumentError,
     Draft,
@@ -21,7 +22,7 @@ from app.agents.quote_parser import (
     summary,
 )
 from app.channels.base import Outbound
-from app.channels.inbound import ROUTERS
+from app.channels.inbound import ROUTERS, Inbound, receive
 from app.channels.simulated import get_channel
 from app.db.models import CatalogItem, Message, Quote, Rfq, RfqInvitation, Vendor
 from app.domain.quote_text import RFQ_CODE
@@ -335,3 +336,44 @@ def form_quote(
     )
     _after_save(db, clock, q, vendor, rfq)
     return q
+
+
+def receive_file(
+    db: Session,
+    clock: Clock,
+    vendor: Vendor,
+    rfq: Rfq | None,
+    data: bytes,
+    filename: str,
+    client_id: str,
+    caption: str,
+) -> Message:
+    """A vendor sends a document (PDF/photo), like a WhatsApp attachment."""
+    too_big = len(data) > MAX_FILE_BYTES
+    ref = None if too_big else get_file_store().save(f"quotes/{vendor.id}", filename, data)
+    msg, created = receive(
+        db,
+        clock,
+        Inbound(
+            vendor=vendor,
+            client_message_id=client_id,
+            text=caption,
+            rfq_id=rfq.id if rfq else None,
+            org_id=rfq.builder_org_id if rfq else None,
+            payload={"file_ref": ref, "filename": filename, "size": len(data)}
+            if ref
+            else {"filename": filename, "size": len(data)},
+        ),
+    )
+    if created and too_big:
+        get_channel().send(
+            db,
+            clock,
+            Outbound(
+                vendor=vendor,
+                text=VENDOR_MESSAGES["too_large"],
+                org_id=msg.builder_org_id,
+                rfq_id=msg.rfq_id,
+            ),
+        )
+    return msg

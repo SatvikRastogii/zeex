@@ -535,3 +535,5 @@ class DemoClockState(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False, default=1)
     offset_seconds: Mapped[int] = mapped_column(BigInteger, default=0)
+    # Demo switches: {"auto_reply": bool, "persona_mode": "scripted" | "gemini"}
+    settings: Mapped[dict[str, Any]] = mapped_column(default=dict)
