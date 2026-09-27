@@ -1,11 +1,12 @@
 """Demo Control Panel endpoints (platform admin only)."""
 
+import time
 from datetime import timedelta
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import sessionmaker
 
 from app.api.deps import Admin, BizClock, Db
@@ -35,11 +36,27 @@ def clock_state(_: Admin, clock: BizClock) -> dict[str, Any]:
     return {"now": clock.now(), "display": format_ist(clock.now())}
 
 
+SETTLE_SECONDS = 30
+
+
 def _advance_and_run(db: Db, delta: timedelta) -> dict[str, Any]:
+    """Move the clock, then run everything due. The background worker may be running some
+    of those jobs at the same moment (SKIP LOCKED gives them to one or the other), so wait
+    for its running jobs to finish and drain again: the call returns only when the system
+    has fully caught up, which keeps the demo deterministic."""
     advance(db, delta)
-    ran = run_due(
-        sessionmaker(get_engine(), expire_on_commit=False), load_clock(db), worker="demo-clock"
-    )
+    make = sessionmaker(get_engine(), expire_on_commit=False)
+    ran = 0
+    deadline = time.monotonic() + SETTLE_SECONDS
+    while True:
+        ran += run_due(make, load_clock(db), worker="demo-clock")
+        with make() as s:
+            busy = (
+                s.scalar(select(func.count()).select_from(Job).where(Job.status == "running")) or 0
+            )
+        if not busy or time.monotonic() > deadline:
+            break
+        time.sleep(0.1)
     return {**_clock_out(db), "jobs_ran": ran}
 
 
