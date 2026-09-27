@@ -254,6 +254,8 @@ class Rfq(Row):
     max_price_paise: Mapped[int | None] = mapped_column(BigInteger)
     revision: Mapped[int] = mapped_column(default=1)
     stale: Mapped[bool] = mapped_column(default=False)
+    # Last matching run: exclusions with reasons, warning, suggestions, radius used.
+    match_report: Mapped[dict[str, Any]] = mapped_column(default=dict)
     version: Mapped[int] = mapped_column(default=1)
 
     __mapper_args__ = {"version_id_col": version}
