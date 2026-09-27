@@ -48,3 +48,14 @@ def add_working_hours(
 
 def in_working_hours(dt: datetime, start: str = "09:00", end: str = "20:00") -> bool:
     return next_working_time(dt, start, end) == dt
+
+
+def last_working_time(dt: datetime, start: str = "09:00", end: str = "20:00") -> datetime:
+    """dt itself if inside working hours, else the last working minute before it."""
+    s, e = _hm(start), _hm(end)
+    local = dt.astimezone(IST)
+    open_, close = _bounds(local, s, e)
+    if open_ <= local < close:
+        return dt
+    day_close = close if local >= close else close - timedelta(days=1)
+    return (day_close - timedelta(minutes=1)).astimezone(dt.tzinfo)

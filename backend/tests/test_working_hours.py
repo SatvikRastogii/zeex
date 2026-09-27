@@ -51,3 +51,29 @@ def test_custom_hours() -> None:
 def test_in_working_hours() -> None:
     assert in_working_hours(ist(25, 12))
     assert not in_working_hours(ist(25, 20) + timedelta(minutes=1))
+
+
+@pytest.mark.parametrize(
+    ("at", "want"),
+    [
+        (ist(25, 14), ist(25, 14)),
+        (ist(25, 21), ist(25, 19, 59)),  # evening -> same day's last minute
+        (ist(26, 7), ist(25, 19, 59)),  # early morning -> previous evening
+    ],
+)
+def test_last_working_time(at: datetime, want: datetime) -> None:
+    from app.domain.working_hours import last_working_time
+
+    assert last_working_time(at) == want
+
+
+def test_reminder_never_lands_on_the_close() -> None:
+    from app.agents.outreach import reminder_time
+
+    hours = {"start": "09:00", "end": "20:00"}
+    opens, closes = ist(28, 9), ist(29, 9)  # half-way is 21:00, next opening is the close
+    assert reminder_time(ist(28, 21), opens, closes, hours) == ist(28, 19, 59)
+    opens2, closes2 = ist(25, 14), ist(26, 14)  # half-way 02:00 -> 09:00 is fine
+    assert reminder_time(ist(26, 2), opens2, closes2, hours) == ist(26, 9)
+    # a window that sits entirely outside working hours gets no reminder
+    assert reminder_time(ist(25, 22), ist(25, 21), ist(25, 23), hours) is None

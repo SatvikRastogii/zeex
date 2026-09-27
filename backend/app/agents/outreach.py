@@ -6,7 +6,7 @@ Every job re-checks state when it runs, so running twice changes nothing."""
 
 import uuid
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -19,7 +19,7 @@ from app.db.models import Bom, BomLine, BuilderOrg, CatalogItem, Rfq, RfqInvitat
 from app.domain.settings import org_settings
 from app.domain.states import transition
 from app.domain.units import format_qty
-from app.domain.working_hours import next_working_time
+from app.domain.working_hours import last_working_time, next_working_time
 from app.jobs.clock import Clock, format_ist
 from app.jobs.queue import enqueue, handler
 
@@ -125,13 +125,15 @@ def send_rfqs(db: Session, clock: Clock, rfq: Rfq, *, actor: str) -> int:
             dedupe_key=f"invite:{inv.id}:r{rfq.revision}",
         )
     halfway = rfq.bid_window_opens_at + (rfq.bid_window_closes_at - rfq.bid_window_opens_at) / 2
-    enqueue(
-        db,
-        "bid_reminder",
-        next_working_time(halfway, hours["start"], hours["end"]),
-        {"rfq_id": str(rfq.id)},
-        dedupe_key=f"reminder:{rfq.id}",
-    )
+    remind_at = reminder_time(halfway, rfq.bid_window_opens_at, rfq.bid_window_closes_at, hours)
+    if remind_at is not None:
+        enqueue(
+            db,
+            "bid_reminder",
+            remind_at,
+            {"rfq_id": str(rfq.id)},
+            dedupe_key=f"reminder:{rfq.id}",
+        )
     enqueue(
         db,
         "bid_close",
@@ -154,6 +156,17 @@ def send_rfqs(db: Session, clock: Clock, rfq: Rfq, *, actor: str) -> int:
         },
     )
     return len(sendable)
+
+
+def reminder_time(
+    halfway: datetime, opens: datetime, closes: datetime, hours: dict[str, str]
+) -> datetime | None:
+    """Half-way through the window, moved into working hours. If waiting for the next
+    opening would reach the close, send at the last working minute before half-way."""
+    at = next_working_time(halfway, hours["start"], hours["end"])
+    if at >= closes:
+        at = last_working_time(halfway, hours["start"], hours["end"])
+    return at if opens < at < closes else None
 
 
 def _invitation(db: Session, payload: dict[str, object]) -> RfqInvitation | None:
