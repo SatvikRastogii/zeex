@@ -102,7 +102,11 @@ def approve(
     return c.post(f"/api/rfqs/{rfq}/approve", json=body)
 
 
-THREE = [(BALAJI, "385", {}), (GUPTA, "390", {}), (DELHI, "400", {})]
+THREE: list[tuple[str, str, dict[str, Any]]] = [
+    (BALAJI, "385", {}),
+    (GUPTA, "390", {}),
+    (DELHI, "400", {}),
+]
 
 
 @pytest.fixture
@@ -197,7 +201,7 @@ def test_two_users_approve_at_the_same_time(
     v = version(seeded, s["rfq"])
     pm = login(SHARMA_PM)
 
-    def go(c: TestClient) -> int:
+    def go(c: TestClient) -> Any:
         return c.post(
             f"/api/rfqs/{s['rfq']}/approve",
             json={"idempotency_key": uuid.uuid4().hex, "choice": "l1", "version": v},
@@ -257,7 +261,12 @@ def test_expired_offer_blocks_approval_and_can_be_reconfirmed(
 def test_split_award_issues_several_pos(
     owner: TestClient, login: Login, seeded: Session, biz: DbDemoClock
 ) -> None:
-    quotes = [(BALAJI, "384", {}), (GUPTA, "382", {}), (YADAV, "390", {}), (MAHALAXMI, "379", {})]
+    quotes: list[tuple[str, str, dict[str, Any]]] = [
+        (BALAJI, "384", {}),
+        (GUPTA, "382", {}),
+        (YADAV, "390", {}),
+        (MAHALAXMI, "379", {}),
+    ]
     s = to_approval(owner, login, seeded, biz, quotes, qty="2000")
     r = approve(owner, seeded, s["rfq"], choice="split")
     assert r.status_code == 200, r.text
@@ -272,7 +281,11 @@ def test_capacity_conflict_across_builders(
     owner: TestClient, login: Login, seeded: Session, biz: DbDemoClock
 ) -> None:
     """Gupta can do 1,000 bags a week. Sharma and Greenline both award Gupta 600 bags for the same week."""
-    cheap_gupta = [(GUPTA, "370", {}), (BALAJI, "395", {}), (YADAV, "398", {})]
+    cheap_gupta: list[tuple[str, str, dict[str, Any]]] = [
+        (GUPTA, "370", {}),
+        (BALAJI, "395", {}),
+        (YADAV, "398", {}),
+    ]
     a = to_approval(owner, login, seeded, biz, cheap_gupta, qty="600")
     greenline = login(GREENLINE_OWNER)
     b = to_approval(
