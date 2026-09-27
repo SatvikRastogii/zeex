@@ -39,5 +39,8 @@ lint:
 fmt:
 	cd backend && uv run ruff format . && uv run ruff check --fix .
 
+# Stops Postgres and any dev server still holding :3000/:8000 (Windows can orphan
+# the uvicorn reloader child).
 stop:
 	docker compose stop
+	-@command -v powershell >/dev/null && powershell -NoProfile -Command "foreach ($$p in 3000,8000) { Get-NetTCPConnection -LocalPort $$p -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $$_.OwningProcess -Force -ErrorAction SilentlyContinue } }" || true
