@@ -68,6 +68,7 @@ def rfq_view(db: Session, rfq: Rfq) -> dict[str, Any]:
         "code": rfq.public_code,
         "status": rfq.status,
         "revision": rfq.revision,
+        "version": rfq.version,
         "stale": rfq.stale,
         "bid_window_opens_at": rfq.bid_window_opens_at,
         "bid_window_closes_at": rfq.bid_window_closes_at,

@@ -6,6 +6,12 @@ import { api } from "@/lib/api";
 import { formatIST, statusTag } from "@/lib/format";
 import Guard from "./guard";
 
+type Actions = {
+  approvals: { rfq_id: string; code: string; routed_to_owner: boolean; runner_up: boolean; single_quote: boolean }[];
+  handoffs: { rfq_id: string; thread: string; vendor: string; reason: string }[];
+  pending_confirmation: { id: string; code: string; vendor: string; confirm_by: string }[];
+};
+
 type BomRow = { id: string; code: string; title: string | null; status: string; revision: number; site: string; lines: number; created_at: string };
 
 const CLOSED = new Set(["closed", "cancelled"]);
@@ -13,8 +19,12 @@ const CLOSED = new Set(["closed", "cancelled"]);
 function Dashboard() {
   const [boms, setBoms] = useState<BomRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actions, setActions] = useState<Actions | null>(null);
 
   useEffect(() => {
+    api<Actions>("/dashboard/actions")
+      .then(setActions)
+      .catch(() => setActions(null));
     api<BomRow[]>("/boms")
       .then(setBoms)
       .catch((e) => setError(e.message));
@@ -32,6 +42,40 @@ function Dashboard() {
         </Link>
       </p>
       {error && <p className="error">{error}</p>}
+      {actions && actions.approvals.length + actions.handoffs.length + actions.pending_confirmation.length > 0 && (
+        <>
+          <h2>Needs action</h2>
+          <ul>
+            {actions.approvals.map((a) => (
+              <li key={a.rfq_id}>
+                <Link className="mono" href={`/rfqs/${a.rfq_id}`}>
+                  {a.code}
+                </Link>{" "}
+                awaits approval
+                {a.routed_to_owner && " (above a purchase manager's limit: owner to approve)"}
+                {a.runner_up && " (award fell through: runner-up ready)"}
+                {a.single_quote && " (single quote, no negotiation)"}
+              </li>
+            ))}
+            {actions.handoffs.map((h) => (
+              <li key={h.thread}>
+                <Link className="mono" href={`/rfqs/${h.rfq_id}`}>
+                  {h.thread}
+                </Link>{" "}
+                {h.vendor}: {h.reason}
+              </li>
+            ))}
+            {actions.pending_confirmation.map((p) => (
+              <li key={p.id}>
+                <Link className="mono" href={`/work-orders/${p.id}`}>
+                  {p.code}
+                </Link>{" "}
+                waiting for {p.vendor} to confirm
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <h2>Open BOMs</h2>
       {Object.keys(counts).length > 0 && (
         <p className="small">

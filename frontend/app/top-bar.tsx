@@ -21,6 +21,16 @@ export default function TopBar() {
         <Link className="app" href="/">
           Z-Procure
         </Link>
+        {me?.kind === "user" && me.role !== "admin" && (
+          <nav aria-label="Main" className="small">
+            <Link href="/">Dashboard</Link> · <Link href="/boms/new">New BOM</Link> · <Link href="/work-orders">Work orders</Link>
+          </nav>
+        )}
+        {me?.kind === "user" && me.role === "admin" && (
+          <nav aria-label="Main" className="small">
+            <Link href="/admin">Control panel</Link>
+          </nav>
+        )}
         <span className="spacer" />
         {me?.kind === "user" && (
           <span>

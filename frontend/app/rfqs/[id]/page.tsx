@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { formatDate, formatIST, statusTag } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import Guard from "../../guard";
+import Approval from "./approval";
 import ComparisonView from "./comparison";
 import Negotiations from "./negotiations";
 import Quotes from "./quotes";
@@ -16,6 +17,7 @@ type Rfq = {
   id: string;
   code: string;
   status: string;
+  version: number;
   bid_window_opens_at: string | null;
   bid_window_closes_at: string | null;
   revision: number;
@@ -29,6 +31,8 @@ type Rfq = {
     suggestions?: string[];
     extra_radius_km?: number;
     eligible?: number;
+    runner_up?: string | null;
+    runner_up_reason?: string;
   };
   shortlist: ShortlistRow[];
 };
@@ -234,6 +238,16 @@ function RfqPage() {
         </p>
       )}
       <SendRfqs rfq={rfq} onChange={setRfq} />
+      <Approval
+        rfqId={rfq.id}
+        status={rfq.status}
+        version={rfq.version}
+        qtyMilli={rfq.line.qty_milli}
+        unit={rfq.line.item.canonical_unit}
+        runnerUp={rfq.match_report.runner_up ?? null}
+        runnerUpReason={rfq.match_report.runner_up_reason ?? null}
+        onChange={load}
+      />
       <Negotiations rfqId={rfq.id} />
       <ComparisonView rfqId={rfq.id} unit={rfq.line.item.canonical_unit} qtyMilli={rfq.line.qty_milli} />
       <Quotes rfqId={rfq.id} canonicalUnit={rfq.line.item.canonical_unit} />
