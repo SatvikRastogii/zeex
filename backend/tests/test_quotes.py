@@ -337,12 +337,17 @@ def test_outlier_price_needs_confirmation(
 
 
 def test_quote_after_window_closed_is_recorded_not_ranked(
-    vendor: TestClient, rfq: dict[str, Any], seeded: Session, biz: DbDemoClock
+    vendor: TestClient, rfq: dict[str, Any], seeded: Session, biz: DbDemoClock, login: Login
 ) -> None:
+    for phone in (
+        "+919000020002",
+        "+919000020004",
+    ):  # two on-time quotes, so the window really closes
+        login(phone).post("/api/vendor/quotes", json=form(rfq["rfq_id"]))
     tick(biz, timedelta(days=1, minutes=5))
     say(vendor, rfq["rfq_id"], "380 per bag + GST")
     tick(biz)
-    (q,) = quotes(seeded)
+    (q,) = [x for x in quotes(seeded) if x.source == "text"]
     assert q.status == "rejected" and "late" in q.flags
     assert "cannot be considered" in last_text(seeded)
 

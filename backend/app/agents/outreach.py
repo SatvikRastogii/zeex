@@ -242,6 +242,10 @@ def bid_close(db: Session, clock: Clock, payload: dict[str, object]) -> None:
     transition(
         db, clock, "rfq", rfq, "evaluating", actor="system:outreach", reason="bid window closed"
     )
+    for hook in CLOSE_HOOKS:
+        hook(db, clock, rfq)
+    if rfq.status == "bidding":
+        return  # a hook extended the window: bidding continues, nothing is closed
     _, _, _, _, cfg = _ctx(db, rfq)
     hours = cfg["working_hours"]
     enqueue(
@@ -251,8 +255,6 @@ def bid_close(db: Session, clock: Clock, payload: dict[str, object]) -> None:
         {"rfq_id": str(rfq.id)},
         dedupe_key=f"closed-notice:{rfq.id}:{rfq.bid_window_closes_at}",
     )
-    for hook in CLOSE_HOOKS:
-        hook(db, clock, rfq)
 
 
 @handler("notify_bid_closed")

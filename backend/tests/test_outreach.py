@@ -118,19 +118,32 @@ def test_clock_jump_past_every_deadline_fires_in_order(
 ) -> None:
     r = published_rfq(owner, seeded)
     owner.post(f"/api/rfqs/{r['rfq_id']}/send")
-    tick(biz, timedelta(days=2))  # invite, reminder, close, closed notice at once
+    # No quotes at all: invite, reminder, close -> window extended once (second reminder),
+    # second close -> insufficient quotes, closed notice. All from one jump, in order.
+    tick(biz, timedelta(days=3))
     balaji = seeded.scalars(select(Vendor).where(Vendor.phone == VENDOR_BALAJI)).one()
     seq = [m.template_name for m in messages(seeded) if m.vendor_id == balaji.id]
-    assert seq == ["rfq_invite", "bid_reminder", "bid_closed"]
+    assert seq == ["rfq_invite", "bid_reminder", "bid_reminder", "bid_closed"]
     seeded.expire_all()
-    assert seeded.get(Rfq, uuid.UUID(r["rfq_id"])).status == "evaluating"  # type: ignore[union-attr]
+    assert seeded.get(Rfq, uuid.UUID(r["rfq_id"])).status == "insufficient_quotes"  # type: ignore[union-attr]
+
+
+def quote_form(rfq_id: str, price: str) -> dict[str, Any]:
+    return {"client_message_id": uuid.uuid4().hex, "rfq_id": rfq_id, "unit_price": price, "price_unit": "bag",
+            "delivery_date": "2026-10-01", "validity_until": "2026-10-20", "payment_terms_days": 15}  # fmt: skip
 
 
 def test_bid_close_moves_to_evaluating(
-    owner: TestClient, seeded: Session, biz: DbDemoClock
+    owner: TestClient, seeded: Session, biz: DbDemoClock, login: Login
 ) -> None:
     r = published_rfq(owner, seeded)
     owner.post(f"/api/rfqs/{r['rfq_id']}/send")
+    tick(biz)
+    for phone, price in ((VENDOR_BALAJI, "385"), (VENDOR_GUPTA, "380")):
+        assert (
+            login(phone).post("/api/vendor/quotes", json=quote_form(r["rfq_id"], price)).status_code
+            == 200
+        )
     tick(biz, timedelta(hours=23, minutes=59))
     assert owner.get(f"/api/rfqs/{r['rfq_id']}").json()["status"] == "bidding"
     tick(biz, timedelta(minutes=2))
@@ -219,7 +232,7 @@ def test_site_engineer_cannot_send(login: Login, owner: TestClient, seeded: Sess
 def test_send_twice_from_wrong_state(owner: TestClient, seeded: Session, biz: DbDemoClock) -> None:
     r = published_rfq(owner, seeded)
     owner.post(f"/api/rfqs/{r['rfq_id']}/send")
-    tick(biz, timedelta(days=2))  # now evaluating
+    tick(biz, timedelta(days=3))  # closed twice: insufficient quotes
     assert owner.post(f"/api/rfqs/{r['rfq_id']}/send").status_code == 409
 
 
