@@ -91,3 +91,19 @@ Newest at the bottom. Each entry: decision, reason.
 - **Unlinked vendors are invisible.** They never appear in the shortlist, the "not matched" list or the add-vendor list, so a builder cannot discover vendors outside its network.
 - **Fewer than 2 matches** keeps the RFQ in `matching` with a warning (1 match) or moves it to `no_vendors_matched` (0), with three suggestions. "Widen radius" re-runs with +10 km; "Allow partial supply" sets the line's partial flag and re-runs. "Allow other brands" is shown as advice only, because BOM lines have no brand constraint yet.
 - **Builder edits**: remove (kept as `removed`, restorable) and add (must pass the same filters; max 15).
+
+## Stage 6
+
+- **Jobs table + worker** (`app/jobs/queue.py`, `python -m app.jobs.worker`) instead of Step Functions/EventBridge/SQS. Claims use `FOR UPDATE SKIP LOCKED`; each job runs in its own transaction; failures retry after 1, 2, 4, 8 minutes, then the job is marked `failed` (shown on the Demo Control Panel). Jobs stuck `running` for 5 minutes (dead worker) go back to `pending`.
+- **Jobs sharing an ordering key run strictly in enqueue order**, even if an earlier one is waiting to retry. An identity column `jobs.seq` gives the enqueue order (`created_at` is the transaction time and ties within one transaction).
+- **Handlers are idempotent**: each re-checks the current state (invitation still queued, RFQ still bidding, revision unchanged) and does nothing otherwise. Enqueues use dedupe keys.
+- **Demo clock = real time + an offset stored in the database**, shared by the API and the worker. It only moves forward. The admin "advance" and "next event" controls move it and then run every job that became due, in order, in the same request, so the demo is deterministic even without the worker. Tests use the same mechanism.
+- **Working hours** default to 09:00-20:00 IST, every day (no weekends or holidays). Invites and notices wait for the next opening; the bid window opens when the first invite can go out. The bid close itself is not deferred.
+- **Reminder** at 50% of the bid window, moved into working hours. If waiting for the next opening would reach the close, it goes at the last working minute before half-way instead. One reminder only, and only to vendors still in `invited` (not responded, blocked or skipped).
+- **24-hour window (simulated)**: free text is only allowed within 24 h of the vendor's last inbound message; otherwise callers must use a template. Every outbound message records whether it was inside the window.
+- **Opt-out**: `STOP`, `unsubscribe` and the Hindi equivalents (whole message only) opt the vendor out immediately and for every builder. The only message sent afterwards is the opt-out confirmation. `START` opts back in. Anything queued for an opted-out vendor is stored as `blocked`, audited, and never shown in the vendor's inbox.
+- **Inbound dedupe** on `external_message_id` (`sim-in-<vendor>-<client id>`). Device time is kept as `sent_at` (capped at our clock), so out-of-order arrivals display in the order they were written. The simulated inbox lets the server stamp the time, because the browser's real clock is behind the demo clock.
+- **Templates are English and Hindi**, chosen by the vendor's first language. Hinglish replies are accepted as input (Stage 7 onwards).
+- **Invites never include the exact site address** (area only); the address goes to the winner with the PO.
+- **Stale RFQ re-send**: editing a line after invites went out queues an `rfq_update` message to invited vendors (closes the Stage 4 gap).
+- **`make stop` on Windows** runs `scripts/stop-dev.ps1`, which matches dev processes by command line. Killing by port missed uvicorn children that inherited the socket, and a stale API kept serving old code during a manual check.

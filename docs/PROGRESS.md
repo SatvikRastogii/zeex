@@ -33,9 +33,16 @@
 - Endpoints: RFQ view, re-match (wider radius / allow partial), candidates, shortlist add/remove (owner and PM only; locked once RFQs are sent).
 - UI: Matching review screen, linked from the BOM detail.
 
+## Stage 6: Messaging, outreach, jobs and demo clock (done)
+- Durable job queue + worker (SKIP LOCKED, FIFO per ordering key, retries with backoff, stale-lock recovery), DB-backed demo clock.
+- `MessageChannel` + `SimulatedWhatsAppChannel`, English/Hindi template registry (the 10 required templates plus opt-out/opt-in confirmations), 24 h window tracking, opt-out blocking.
+- Inbound: dedupe, out-of-order device time, STOP/START.
+- Outreach agent: send RFQs (max 15, opted-out skipped), working-hours deferral, 50% reminder to non-responders, bid close → evaluating, closed notices, stale-RFQ updates.
+- UI: Send RFQs + invitation statuses on the RFQ page, Vendor Inbox (conversations, template buttons, reply, STOP), Demo Control Panel (clock +15 min / +1 h / next event, pending and failed jobs, event log). `make dev` also starts the worker.
+
 ## Next
-Stage 6: messaging, outreach, jobs and demo clock.
+Stage 7: quotation intake and parsing.
 
 ## Known gaps
 - `make demo` arrives with the demo panel (Stage 12).
-- Stale RFQs are not yet re-sent to vendors (needs outreach, Stage 6).
+- The quote form in the Vendor Inbox is a placeholder until Stage 7.

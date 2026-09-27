@@ -87,8 +87,31 @@ Filled in stage by stage; gaps are listed at the bottom with a reason.
 | Shortlist after RFQs sent | 409 | `test_rfqs_api.py::test_shortlist_locked_after_invites` |
 | Site engineer edits shortlist | 403 (can still view) | `test_rfqs_api.py::test_shortlist_edit_permission`, `::test_site_engineer_can_view_rfq` |
 
+## Messaging, outreach, jobs, demo clock (Stage 6)
+
+| Case | Behaviour | Test |
+|---|---|---|
+| Duplicate inbound message | Stored once; second call reports duplicate | `test_channel.py::test_duplicate_inbound_is_stored_once`, `test_outreach.py::test_vendor_inbox_conversations_and_reply` |
+| Out-of-order delivery | Ordered by device time; future device time capped | `test_channel.py::test_out_of_order_arrival_keeps_device_time`, `::test_device_time_in_future_is_capped` |
+| Message to opted-out vendor | Blocked, audited, not delivered, not in inbox | `test_channel.py::test_opted_out_vendor_is_blocked_and_logged`, `test_outreach.py::test_opt_out_after_queueing_blocks_and_logs`, `::test_blocked_messages_are_not_in_the_vendor_inbox` |
+| Opted-out vendor on the shortlist | Skipped at send | `test_outreach.py::test_opted_out_on_shortlist_is_skipped` |
+| STOP | Immediate, global, confirmation sent; START re-opts in; "stop" inside a sentence ignored | `test_channel.py::test_stop_opts_out_globally`, `::test_start_opts_back_in`, `::test_stop_inside_a_sentence_is_not_opt_out` |
+| Free text outside 24 h window | Refused (template required) | `test_channel.py::test_free_text_needs_open_window` |
+| Job crash mid-run | Rolled back, retried with backoff, then succeeds | `test_jobs.py::test_crash_is_retried_with_backoff_then_succeeds` |
+| Job keeps failing | Marked failed after 5 attempts | `test_jobs.py::test_gives_up_after_max_attempts` |
+| Worker restart | Stale `running` jobs recovered after 5 min | `test_jobs.py::test_stale_running_job_recovered_after_worker_restart` |
+| Two workers | SKIP LOCKED claims are disjoint | `test_jobs.py::test_skip_locked_claims_are_disjoint` |
+| Per-thread ordering | FIFO per key, even across retries | `test_jobs.py::test_ordering_key_is_fifo_even_across_retries` |
+| Clock jumps past several deadlines | All fire, in order | `test_jobs.py::test_clock_jump_fires_all_due_jobs_in_order`, `test_outreach.py::test_clock_jump_past_every_deadline_fires_in_order` |
+| Outside working hours | Deferred to 09:00 IST | `test_outreach.py::test_outside_working_hours_deferred_to_next_morning`, `test_working_hours.py` |
+| Reminder | 50% of window, non-responders only, once, never at the close | `test_outreach.py::test_reminder_at_half_window_only_to_non_responders`, `test_working_hours.py::test_reminder_never_lands_on_the_close` |
+| More than 15 vendors | 15 invited, rest `skipped_limit` | `test_outreach.py::test_max_15_invites` |
+| Exact address before award | Never in invites (area only) | `test_outreach.py::test_send_rfqs_in_working_hours` |
+| BOM edited after invites | Vendors get `rfq_update` with the change | `test_outreach.py::test_stale_rfq_resent_with_the_change` |
+| Reply on an RFQ the vendor was not invited to | 404 | `test_outreach.py::test_vendor_cannot_reply_on_rfq_they_were_not_invited_to` |
+
 ## Gaps
 
 | Case | Reason |
 |---|---|
-| Stale RFQ → vendors re-invited with the change | Marking stale is done (Stage 4); re-sending needs the outreach agent (Stage 6). |
+| (none so far) | |
