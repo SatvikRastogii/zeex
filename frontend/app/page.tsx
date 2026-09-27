@@ -1,8 +1,12 @@
+"use client";
+
+import Guard from "./guard";
+
 export default function Home() {
   return (
-    <>
-      <h1>Procurement Agent</h1>
-      <p className="muted">Demo build. Screens are added stage by stage.</p>
-    </>
+    <Guard need="builder">
+      <h1>Dashboard</h1>
+      <p className="muted">Open BOMs and items needing action appear here from Stage 4.</p>
+    </Guard>
   );
 }

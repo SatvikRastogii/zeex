@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SessionProvider } from "@/lib/session";
 import TopBar from "./top-bar";
 
 export const metadata: Metadata = {
@@ -11,8 +12,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body>
-        <TopBar />
-        <main>{children}</main>
+        <SessionProvider>
+          <TopBar />
+          <main>{children}</main>
+        </SessionProvider>
       </body>
     </html>
   );
