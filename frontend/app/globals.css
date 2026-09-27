@@ -1,0 +1,88 @@
+/* Strict palette: #000, #fff, #f2f2f2, #ddd, #777. Sizes: 13/14/16/20px only. */
+:root {
+  --black: #000;
+  --white: #fff;
+  --grey-1: #f2f2f2;
+  --grey-2: #ddd;
+  --grey-3: #777;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--white);
+  color: var(--black);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+h1 { font-size: 20px; margin: 16px 0 8px; }
+h2 { font-size: 16px; margin: 16px 0 8px; }
+h3 { font-size: 14px; margin: 12px 0 6px; }
+small, .small { font-size: 13px; }
+.muted { color: var(--grey-3); }
+.mono, code { font-family: var(--mono); }
+
+a { color: var(--black); }
+
+main { max-width: 1200px; margin: 0 auto; padding: 0 16px 32px; }
+
+:focus-visible { outline: 2px solid var(--black); outline-offset: 2px; }
+
+button, .btn {
+  font: inherit;
+  font-size: 14px;
+  padding: 4px 12px;
+  border: 1px solid var(--black);
+  border-radius: 2px;
+  background: var(--black);
+  color: var(--white);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+button.secondary, .btn.secondary { background: var(--white); color: var(--black); }
+button:disabled { background: var(--grey-2); border-color: var(--grey-2); color: var(--grey-3); cursor: not-allowed; }
+
+input, select, textarea {
+  font: inherit;
+  font-size: 14px;
+  padding: 4px 6px;
+  border: 1px solid var(--black);
+  border-radius: 2px;
+  background: var(--white);
+  color: var(--black);
+}
+label { display: block; margin: 8px 0 4px; font-size: 13px; }
+
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { border: 1px solid var(--grey-2); padding: 4px 6px; text-align: left; vertical-align: top; }
+th { background: var(--grey-1); font-weight: 600; }
+td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.box { border: 1px solid var(--black); border-radius: 2px; padding: 12px; margin: 12px 0; }
+.status { font-family: var(--mono); font-size: 13px; }
+.error { border: 1px solid var(--black); background: var(--grey-1); padding: 6px 8px; font-size: 13px; }
+.sim { font-family: var(--mono); font-size: 13px; border: 1px dashed var(--grey-3); padding: 0 4px; }
+
+.topbar {
+  border-bottom: 1px solid var(--black);
+  background: var(--white);
+}
+.topbar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: baseline;
+  font-size: 13px;
+}
+.topbar-inner .app { font-size: 16px; font-weight: 700; text-decoration: none; }
+.topbar-inner .spacer { flex: 1; }
