@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import BuilderOrg, Message, Site, User, Vendor
+from app.db.models import Bom, BomLine, BuilderOrg, Message, Site, User, Vendor
 from tests.phones import GREENLINE_OWNER, SHARMA_OWNER, VENDOR_BALAJI, VENDOR_GUPTA
 
 Login = Callable[[str], TestClient]
@@ -21,9 +21,22 @@ Login = Callable[[str], TestClient]
 
 def greenline_ids(db: Session) -> dict[str, uuid.UUID]:
     org = db.scalars(select(BuilderOrg).where(BuilderOrg.name == "Greenline Infra")).one()
+    site = db.scalars(select(Site).where(Site.builder_org_id == org.id)).first()
+    assert site is not None
+    bom = Bom(builder_org_id=org.id, public_code="BOM-GL-1", site_id=site.id, status="validated",
+              original_file_ref=f"boms/{org.id}/x.csv")  # fmt: skip
+    db.add(bom)
+    db.flush()
+    line = BomLine(builder_org_id=org.id, bom_id=bom.id, line_no=1, raw_text="sand",
+                   qty_canonical_milli=1000, unit="cft", qty_entered="1",
+                   needed_by=datetime(2026, 10, 5).date())  # fmt: skip
+    db.add(line)
+    db.commit()
     return {
-        "site": db.scalars(select(Site).where(Site.builder_org_id == org.id)).first().id,  # type: ignore[union-attr]
+        "site": site.id,
         "user": db.scalars(select(User).where(User.phone == GREENLINE_OWNER)).one().id,
+        "bom": bom.id,
+        "line": line.id,
     }
 
 
@@ -31,6 +44,11 @@ def greenline_ids(db: Session) -> dict[str, uuid.UUID]:
 TENANT_ENDPOINTS = [
     ("GET", "/api/sites/{id}", None, "site"),
     ("PATCH", "/api/org/users/{id}", {"is_active": False}, "user"),
+    ("GET", "/api/boms/{id}", None, "bom"),
+    ("GET", "/api/boms/{id}/file", None, "bom"),
+    ("POST", "/api/boms/{id}/publish", None, "bom"),
+    ("POST", "/api/boms/{id}/cancel", None, "bom"),
+    ("POST", "/api/boms/validate", {"site_id": "{id}", "rows": []}, "site"),
 ]
 
 
@@ -39,7 +57,7 @@ def test_other_tenants_rows_are_404(
     login: Login, seeded: Session, method: str, path: str, body: object, kind: str
 ) -> None:
     target = greenline_ids(seeded)[kind]
-    r = login(SHARMA_OWNER).request(method, path.format(id=target), json=body)
+    r = login(SHARMA_OWNER).request(method, path.format(id=target), json=_fill(body, target))
     assert r.status_code == 404
 
 
@@ -47,7 +65,22 @@ def test_other_tenants_rows_are_404(
 def test_missing_rows_are_also_404(
     login: Login, method: str, path: str, body: object, kind: str
 ) -> None:
-    r = login(SHARMA_OWNER).request(method, path.format(id=uuid.uuid4()), json=body)
+    missing = uuid.uuid4()
+    r = login(SHARMA_OWNER).request(method, path.format(id=missing), json=_fill(body, missing))
+    assert r.status_code == 404
+
+
+def _fill(body: object, target: uuid.UUID) -> object:
+    if isinstance(body, dict):
+        return {k: str(target) if v == "{id}" else v for k, v in body.items()}
+    return body
+
+
+def test_other_tenants_bom_line_is_404(login: Login, seeded: Session) -> None:
+    ids = greenline_ids(seeded)
+    r = login(SHARMA_OWNER).patch(
+        f"/api/boms/{ids['bom']}/lines/{ids['line']}", json={"quantity": "2"}
+    )
     assert r.status_code == 404
 
 

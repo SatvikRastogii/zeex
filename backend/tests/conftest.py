@@ -1,4 +1,5 @@
 import os
+import tempfile
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -8,8 +9,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import get_settings
 
-# Point the app at the test database before anything creates an engine.
+# Point the app at the test database (and a throwaway storage folder) before anything
+# creates an engine or writes a file.
 os.environ["DATABASE_URL"] = get_settings().test_database_url
+os.environ["STORAGE_DIR"] = tempfile.mkdtemp(prefix="zp-test-storage-")
 get_settings.cache_clear()
 
 from alembic import command  # noqa: E402
@@ -54,7 +57,7 @@ from datetime import UTC, datetime  # noqa: E402
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.api.deps import get_wall_clock  # noqa: E402
+from app.api.deps import get_clock, get_wall_clock  # noqa: E402
 from app.jobs.clock import FixedClock  # noqa: E402
 from app.main import app  # noqa: E402
 from app.seed.run import seed_static  # noqa: E402
@@ -77,8 +80,20 @@ def wall() -> Iterator[FixedClock]:
     app.dependency_overrides.pop(get_wall_clock, None)
 
 
+BIZ_START = datetime(2026, 9, 25, 8, 35, tzinfo=UTC)  # 25 Sep 2026 14:05 IST
+
+
 @pytest.fixture
-def login(seeded: Session, wall: FixedClock) -> Callable[[str], TestClient]:
+def biz() -> Iterator[FixedClock]:
+    """Controllable business clock (what the demo clock drives)."""
+    clock = FixedClock(BIZ_START)
+    app.dependency_overrides[get_clock] = lambda: clock
+    yield clock
+    app.dependency_overrides.pop(get_clock, None)
+
+
+@pytest.fixture
+def login(seeded: Session, wall: FixedClock, biz: FixedClock) -> Callable[[str], TestClient]:
     """login(phone) -> a TestClient holding that principal's session cookie."""
 
     def _login(phone: str) -> TestClient:

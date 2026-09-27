@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, auth, health, org, vendor
+from app.api import admin, auth, boms, health, org, vendor
 from app.config import get_settings
 
 settings = get_settings()
@@ -19,5 +19,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-for r in (health.router, auth.router, org.router, vendor.router, admin.router):
+for r in (
+    health.router,
+    auth.router,
+    org.router,
+    boms.catalog_router,
+    boms.router,
+    vendor.router,
+    admin.router,
+):
     app.include_router(r, prefix="/api")
