@@ -40,9 +40,17 @@
 - Outreach agent: send RFQs (max 15, opted-out skipped), working-hours deferral, 50% reminder to non-responders, bid close → evaluating, closed notices, stale-RFQ updates.
 - UI: Send RFQs + invitation statuses on the RFQ page, Vendor Inbox (conversations, template buttons, reply, STOP), Demo Control Panel (clock +15 min / +1 h / next event, pending and failed jobs, event log). `make dev` also starts the worker.
 
+## Stage 7: Quotation intake and parsing (done)
+- LLM layer: `LLMProvider`, strict schemas, `structured()` (validate → one retry → None), `MockProvider` (scriptable, records prompts), `GeminiProvider` (REST, untested without a key).
+- Deterministic English/Hinglish text parser as fallback.
+- Quotation Parser: PDF text layer / scan / photo, rate lists, unit conversion, arithmetic, outlier, validity, suspicious-content and late checks; revisions, confirmation (Yes/Edit), withdrawal, RFQ picker for ambiguous documents.
+- Vendor endpoints: quote form, file upload (raw body), demo sample documents. Builder endpoints: quotes per RFQ, original file.
+- Six generated sample documents (clean, arithmetic error, rate list, photo, scanned PDF, hidden instructions).
+- UI: working quote form, attachments and sample sender in the Vendor Inbox; "Quotes received" table with flags and the original document shown next to the parsed values.
+
 ## Next
-Stage 7: quotation intake and parsing.
+Stage 8: evaluation, shortlist and big orders.
 
 ## Known gaps
 - `make demo` arrives with the demo panel (Stage 12).
-- The quote form in the Vendor Inbox is a placeholder until Stage 7.
+- Live Gemini is not exercised (no key); the mock provider is labelled Simulated in the UI.

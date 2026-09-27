@@ -110,8 +110,34 @@ Filled in stage by stage; gaps are listed at the bottom with a reason.
 | BOM edited after invites | Vendors get `rfq_update` with the change | `test_outreach.py::test_stale_rfq_resent_with_the_change` |
 | Reply on an RFQ the vendor was not invited to | 404 | `test_outreach.py::test_vendor_cannot_reply_on_rfq_they_were_not_invited_to` |
 
+## Quotation intake and parsing (Stage 7)
+
+| Case | Behaviour | Test |
+|---|---|---|
+| Arithmetic mismatch | Flagged, vendor asked to check, confirmation required | `test_quotes.py::test_arithmetic_mismatch_flagged_and_vendor_told` |
+| Per-tonne quote for a per-bag RFQ | Converted and shown (₹7,600/t = ₹380/bag) | `test_quotes.py::test_per_tonne_quote_converted_to_per_bag` |
+| GST included vs excluded | Recorded as quoted with the rate | `test_quotes.py::test_gst_included_vs_excluded`, `test_quote_text.py::test_gst_phrases` |
+| Missing validity | Today + 7 days, flagged | `test_quotes.py::test_missing_validity_defaults_and_flags` |
+| Validity too short | Flagged | `test_quotes.py::test_short_validity_flagged` |
+| Quote after window closed | Recorded as rejected/late, not ranked, vendor told politely | `test_quotes.py::test_quote_after_window_closed_is_recorded_not_ranked` |
+| Vendor quotes twice | Latest confirmed wins, earlier superseded, history kept | `test_quotes.py::test_second_quote_supersedes_first_and_history_is_kept` |
+| Ambiguous RFQ for a document | List picker; parsed against the chosen RFQ | `test_quotes.py::test_ambiguous_rfq_asks_which_one`, `::test_single_open_rfq_needs_no_question` |
+| Hidden-instruction PDF | Parsed as data (visible rate), flagged, nothing auto-accepted, RFQ unchanged | `test_quotes.py::test_hidden_instructions_are_just_data` |
+| Outlier price | Flagged against the reference median; confirmation required even for form quotes | `test_quotes.py::test_outlier_price_needs_confirmation` |
+| Unreadable file | Vendor asked to resend; no quote | `test_quotes.py::test_unreadable_photo_asks_to_resend`, `::test_corrupt_pdf_is_unreadable` |
+| File too large / wrong type | Vendor told; no parse | `test_quotes.py::test_file_too_large`, `::test_wrong_file_type` |
+| Rate list | Only the RFQ item's row is used | `test_quotes.py::test_rate_list_keeps_only_the_rfq_item` |
+| Scanned PDF / photo | Sent to the model as a file (multimodal) | `test_quotes.py::test_scanned_documents_go_multimodal` |
+| Non-form quote | Awaits vendor confirmation (Yes/Edit) | `test_quotes.py::test_text_quote_needs_confirmation`, `::test_edit_button_reopens_the_quote` |
+| Withdrawal | Latest confirmed quote withdrawn | `test_quotes.py::test_withdraw` |
+| LLM returns invalid JSON / extra fields | One retry, then deterministic fallback | `test_quotes.py::test_invalid_llm_json_retries_then_falls_back`, `::test_llm_extra_fields_rejected`, `test_quote_text.py::test_structured_retries_once_then_gives_up` |
+| Target/max price privacy | Never in any prompt | `test_quotes.py::test_target_and_max_price_never_reach_the_llm` |
+| Quantities mistaken for prices | "30 bags" / "50 kg" are not rates | `test_quote_text.py::test_quantities_are_not_prices` |
+| Double-submitted form / re-run parse job | One quote | `test_quotes.py::test_form_submission_is_idempotent`, `::test_every_parse_is_idempotent` |
+| Quote on an RFQ not invited to; another org's quotes | 404 | `test_quotes.py::test_vendor_cannot_quote_on_rfq_not_invited`, `::test_quotes_cross_tenant_404` |
+
 ## Gaps
 
 | Case | Reason |
 |---|---|
-| (none so far) | |
+| Live Gemini parsing | No API key available in this environment; the provider is implemented against the documented REST API but only the mock is exercised by tests. |
