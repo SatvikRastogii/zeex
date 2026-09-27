@@ -1,17 +1,21 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 
+from app.api.deps import BizClock, Db
 from app.config import get_settings
-from app.db.session import get_db
+from app.jobs.clock import format_ist
 
 router = APIRouter()
 
 
 @router.get("/health")
-def health(db: Annotated[Session, Depends(get_db)]) -> dict[str, object]:
+def health(db: Db, clock: BizClock) -> dict[str, object]:
     db.execute(text("SELECT 1"))
     s = get_settings()
-    return {"status": "ok", "db": "ok", "demo_mode": s.demo_mode, "llm": s.llm_provider}
+    return {
+        "status": "ok",
+        "db": "ok",
+        "demo_mode": s.demo_mode,
+        "llm": s.llm_provider,
+        "clock": format_ist(clock.now()),
+    }
