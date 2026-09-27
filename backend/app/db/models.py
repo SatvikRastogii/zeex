@@ -451,6 +451,7 @@ class Delivery(Row):
     received_at: Mapped[datetime | None]
     status: Mapped[str] = mapped_column(Text, default="dispatched")
     flags: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    client_ref: Mapped[str | None] = mapped_column(Text, unique=True)  # idempotent dispatch
 
     __table_args__ = (UniqueConstraint("work_order_id", "seq"),)
 
@@ -466,7 +467,11 @@ class Invoice(Row):
     amount_paise: Mapped[int] = mapped_column(BigInteger)
     unit_price_paise: Mapped[int | None] = mapped_column(BigInteger)
     mismatch_flags: Mapped[dict[str, Any]] = mapped_column(default=dict)
-    status: Mapped[str] = mapped_column(Text, default="received")  # received | matched | flagged
+    # received | matched | flagged | accepted (flagged, then accepted by the builder)
+    status: Mapped[str] = mapped_column(Text, default="received")
+    client_ref: Mapped[str | None] = mapped_column(Text, unique=True)
+    accepted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    accept_note: Mapped[str | None] = mapped_column(Text)
 
 
 class PriceHistory(Row):
