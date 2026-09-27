@@ -160,3 +160,20 @@ def test_fresh_running_job_not_recovered(db: Session, make: sessionmaker[Session
         assert recover_stale(s, T0 + timedelta(minutes=1)) == 0
     db.execute(update(Job).values(status="done"))
     db.commit()
+
+
+seen_at: list[datetime] = []
+
+
+@handler("test.when")
+def _when(db: Session, clock: Clock, payload: dict[str, Any]) -> None:
+    seen_at.append(clock.now())
+
+
+def test_catch_up_runs_each_job_at_its_own_time(db: Session, make: sessionmaker[Session]) -> None:
+    seen_at.clear()
+    for h in (1, 3):
+        enqueue(db, "test.when", T0 + timedelta(hours=h), {})
+    db.commit()
+    run_due(make, FixedClock(T0 + timedelta(days=2)))  # one big jump
+    assert seen_at == [T0 + timedelta(hours=1), T0 + timedelta(hours=3)]

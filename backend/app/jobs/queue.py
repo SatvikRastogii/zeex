@@ -138,14 +138,26 @@ def run_due(
 ) -> int:
     """Run every due job, oldest first, until none are due. Returns how many ran.
 
-    Jobs created by handlers that are already due run in the same call, so jumping
-    the clock past several deadlines fires them all, in order."""
+    Used when the demo clock jumps. Each job runs *at its own scheduled time*
+    (a clock pinned to run_at), so a close at 14:05 on day 1 behaves as if it fired
+    then, even when the jump lands on day 3. Jobs created by handlers that are
+    already due run in the same call, so every deadline fires, in order."""
     ran = 0
     while ran < max_jobs:
         with make_session() as s:
             jobs = claim(s, worker, clock.now(), limit=1)
         if not jobs:
             return ran
-        run_job(make_session, clock, jobs[0])
+        job = jobs[0]
+        at = job.run_at if job.run_at < clock.now() else clock.now()
+        run_job(make_session, _Pinned(at), job)
         ran += 1
     return ran
+
+
+class _Pinned:
+    def __init__(self, at: datetime) -> None:
+        self.at = at
+
+    def now(self) -> datetime:
+        return self.at
