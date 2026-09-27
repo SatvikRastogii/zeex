@@ -2,9 +2,10 @@ import os
 import tempfile
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import insert, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import get_settings
@@ -57,17 +58,34 @@ from datetime import UTC, datetime  # noqa: E402
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.api.deps import get_clock, get_wall_clock  # noqa: E402
+from app.api.deps import COOKIE, get_clock, get_wall_clock, issue_token  # noqa: E402
+from app.auth.otp import find_subject  # noqa: E402
 from app.jobs.clock import FixedClock  # noqa: E402
 from app.main import app  # noqa: E402
 from app.seed.run import seed_static  # noqa: E402
 
+_SEED_ROWS: list[tuple[Any, list[dict[str, Any]]]] | None = None
+
 
 @pytest.fixture
 def seeded(db: Session) -> Session:
-    """Orgs, users, sites, catalog and vendors (no history)."""
-    seed_static(db, FixedClock(datetime(2026, 9, 25, 8, 35, tzinfo=UTC)))
-    db.commit()
+    """Orgs, users, sites, catalog and vendors (no history).
+
+    The seed runs once per session; later tests bulk-insert a snapshot of its rows,
+    which is much faster than re-running ~150 upserts."""
+    global _SEED_ROWS
+    if _SEED_ROWS is None:
+        seed_static(db, FixedClock(datetime(2026, 9, 25, 8, 35, tzinfo=UTC)))
+        db.commit()
+        _SEED_ROWS = [
+            (t, [dict(r._mapping) for r in db.execute(select(t))])
+            for t in Base.metadata.sorted_tables
+        ]
+    else:
+        for table, rows in _SEED_ROWS:
+            if rows:
+                db.execute(insert(table), rows)
+        db.commit()
     return db
 
 
@@ -97,10 +115,11 @@ def login(seeded: Session, wall: FixedClock, biz: FixedClock) -> Callable[[str],
     """login(phone) -> a TestClient holding that principal's session cookie."""
 
     def _login(phone: str) -> TestClient:
-        c = TestClient(app)
-        code = c.post("/api/auth/otp/request", json={"phone": phone}).json()["demo_otp"]
-        r = c.post("/api/auth/otp/verify", json={"phone": phone, "code": code})
-        assert r.status_code == 200, r.text
-        return c
+        # Issue the session directly: the OTP flow itself is covered in test_auth.py,
+        # and argon2 on every login would dominate the suite's run time.
+        subject = find_subject(seeded, phone)
+        assert subject is not None, phone
+        token = issue_token(seeded, subject[0], subject[1], wall)
+        return TestClient(app, cookies={COOKIE: token})
 
     return _login
