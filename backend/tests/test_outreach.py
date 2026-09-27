@@ -133,7 +133,7 @@ def quote_form(rfq_id: str, price: str) -> dict[str, Any]:
             "delivery_date": "2026-10-01", "validity_until": "2026-10-20", "payment_terms_days": 15}  # fmt: skip
 
 
-def test_bid_close_moves_to_evaluating(
+def test_bid_close_evaluates_then_negotiates(
     owner: TestClient, seeded: Session, biz: DbDemoClock, login: Login
 ) -> None:
     r = published_rfq(owner, seeded)
@@ -147,7 +147,7 @@ def test_bid_close_moves_to_evaluating(
     tick(biz, timedelta(hours=23, minutes=59))
     assert owner.get(f"/api/rfqs/{r['rfq_id']}").json()["status"] == "bidding"
     tick(biz, timedelta(minutes=2))
-    assert owner.get(f"/api/rfqs/{r['rfq_id']}").json()["status"] == "evaluating"
+    assert owner.get(f"/api/rfqs/{r['rfq_id']}").json()["status"] == "negotiating"
     assert len(messages(seeded, "bid_closed")) == 5
 
 
