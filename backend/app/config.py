@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -23,6 +24,12 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:3000"
     cookie_secure: bool = False  # True behind HTTPS
     log_level: str = "INFO"
+
+    @field_validator("storage_dir")
+    @classmethod
+    def _anchor(cls, v: Path) -> Path:
+        """A relative STORAGE_DIR means relative to the repo, whatever the working directory."""
+        return v if v.is_absolute() else ROOT / v
 
 
 @lru_cache

@@ -90,6 +90,7 @@ def main() -> int:
     if not get_settings().demo_mode:
         print("demo tools need DEMO_MODE=true", file=sys.stderr)
         return 2
+    write_status(state="running", current="starting", error=None, results={})  # clear the last run
     try:
         if args.reset:
             write_status(state="running", current="Resetting demo data", results={})
