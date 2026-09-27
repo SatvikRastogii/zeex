@@ -11,6 +11,8 @@ dependencies = [
     "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",
     "pyjwt>=2.15.0",
+    "pypdf>=6.19.0",
+    "reportlab>=5.0.1",
     "sqlalchemy>=2",
     "uvicorn[standard]>=0.54.0",
 ]
@@ -25,7 +27,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "SIM"]
-ignore = ["S101", "B008"]
+ignore = ["S101", "B008", "E501"]  # formatter owns line width; long strings/regexes stay whole
 
 [tool.ruff.lint.isort]
 known-third-party = ["alembic"]
@@ -56,5 +58,10 @@ dev = [
 
 [[tool.mypy.overrides]]
 # No bundled types; stub packages would be an extra dependency.
-module = ["openpyxl", "openpyxl.*"]
+module = ["openpyxl", "openpyxl.*", "reportlab", "reportlab.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# Draws the demo PDFs with reportlab, which ships no types.
+module = ["app.seed.sample_docs"]
+disallow_untyped_calls = false
