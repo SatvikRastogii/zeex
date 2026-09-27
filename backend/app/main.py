@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, approvals, auth, boms, deliveries, health, org, rfqs, vendor
+from app.api import admin, approvals, auth, boms, deliveries, directory, health, org, rfqs, vendor
 from app.config import get_settings
 from app.jobs import handlers  # noqa: F401  registers job handlers and inbound routers
 
@@ -31,6 +31,7 @@ for r in (
     rfqs.neg_router,
     approvals.router,
     deliveries.router,
+    directory.router,
     vendor.router,
     admin.router,
 ):
