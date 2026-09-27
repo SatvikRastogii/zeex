@@ -69,6 +69,24 @@ Filled in stage by stage; gaps are listed at the bottom with a reason.
 | Editing after approval stage | 409 | `test_boms_api.py::test_edit_locked_after_approval_stage` |
 | Another org's uploaded file | Rejected | `test_boms_api.py::test_file_ref_of_another_org_rejected` |
 
+## Vendor matching (Stage 5)
+
+| Case | Behaviour | Test |
+|---|---|---|
+| Zero matches | RFQ `no_vendors_matched`, suggestions shown | `test_rfqs_api.py::test_all_blocked_gives_no_vendors_matched`, `test_matching.py::test_zero_matches_warns_with_suggestions` |
+| One match | Warning "no competition on price" + suggestions | `test_rfqs_api.py::test_opted_out_vendor_filtered_and_single_match_warned`, `test_matching.py::test_one_match_warns` |
+| All matches blocked or opted out | Filtered with reason; zero-match path | `test_rfqs_api.py::test_all_blocked_gives_no_vendors_matched` |
+| Blocked by one builder only | Excluded for that builder, matched for others | `test_rfqs_api.py::test_blocked_by_this_builder_only` |
+| Linked to builder A, not B | Invisible to B (not even listed as excluded) | `test_rfqs_api.py::test_vendor_linked_to_a_but_not_b`, `test_matching.py::test_unlinked_vendor_is_invisible` |
+| At capacity for the week | Excluded: "No capacity left in the needed-by week" | `test_rfqs_api.py::test_vendor_at_capacity_for_the_week` |
+| Missing GSTIN | Excluded with reason | `test_rfqs_api.py::test_missing_gstin_filtered` |
+| Opted out | Excluded with reason | `test_rfqs_api.py::test_opted_out_vendor_filtered_and_single_match_warned` |
+| Ties in score | Distance, then name; repeat runs identical | `test_matching.py::test_ties_broken_by_distance_then_name`, `test_rfqs_api.py::test_same_inputs_same_order` |
+| Widen radius | Re-run brings the vendor in | `test_rfqs_api.py::test_widen_radius_rematch` |
+| Adding an ineligible vendor | 422 with the filter reason | `test_rfqs_api.py::test_cannot_add_ineligible_vendor` |
+| Shortlist after RFQs sent | 409 | `test_rfqs_api.py::test_shortlist_locked_after_invites` |
+| Site engineer edits shortlist | 403 (can still view) | `test_rfqs_api.py::test_shortlist_edit_permission`, `::test_site_engineer_can_view_rfq` |
+
 ## Gaps
 
 | Case | Reason |

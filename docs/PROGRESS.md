@@ -27,8 +27,14 @@
 - UI: dashboard (open BOMs + status counts), New BOM (upload or type rows, inline errors, item chooser), BOM detail (publish, cancel, edit line).
 - `docs/EDGE_CASES.md` started (Stages 2–4).
 
+## Stage 5: Vendor matching (done)
+- Pure matcher (`agents/matching.py`): hard filters with reasons, 0–100 score with a one-line reason, deterministic ties, warnings and suggestions.
+- DB runner: capacity reservations per IST week, price position from closed orders, stores proposed invitations and a match report.
+- Endpoints: RFQ view, re-match (wider radius / allow partial), candidates, shortlist add/remove (owner and PM only; locked once RFQs are sent).
+- UI: Matching review screen, linked from the BOM detail.
+
 ## Next
-Stage 5: vendor matching.
+Stage 6: messaging, outreach, jobs and demo clock.
 
 ## Known gaps
 - `make demo` arrives with the demo panel (Stage 12).
