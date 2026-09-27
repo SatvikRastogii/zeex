@@ -41,7 +41,7 @@ def _indian_group(digits: str) -> str:
     if len(digits) <= 3:
         return digits
     head, tail = digits[:-3], digits[-3:]
-    pairs = []
+    pairs: list[str] = []
     while len(head) > 2:
         pairs.insert(0, head[-2:])
         head = head[:-2]
