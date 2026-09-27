@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.agents.match_runner import run_matching
+from app.agents.outreach import schedule_rfq_update
 from app.api.deps import BizClock, Builder, Db, org_id, require
 from app.db.audit import audit
 from app.db.catalog import build_index
@@ -447,6 +448,8 @@ def edit_line(
         if rfq is not None:
             rfq.revision += 1
             rfq.stale = rfq.status not in {"draft", "matching", "no_vendors_matched"}
+            if rfq.status in {"invited", "bidding"}:
+                schedule_rfq_update(db, clock, rfq)  # vendors get the change
     audit(
         db,
         clock,

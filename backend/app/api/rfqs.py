@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.agents.match_runner import MATCHABLE, load_context, run_matching
 from app.agents.matching import MAX_INVITES, exclusion, score
+from app.agents.outreach import OutreachError, send_rfqs
 from app.api.deps import BizClock, Builder, Db, org_id, require
 from app.db.audit import audit
 from app.db.models import Bom, BomLine, CatalogItem, Rfq, RfqInvitation, Site, User, Vendor
@@ -77,6 +78,7 @@ def rfq_view(db: Session, rfq: Rfq) -> dict[str, Any]:
                 "added_by_builder": bool(i.match_reasons.get("added_by_builder")),
                 "status": i.status,
                 "invited_at": i.invited_at,
+                "reminded_at": i.reminded_at,
             }
             for i in invites
         ],
@@ -211,5 +213,19 @@ def edit_shortlist(
         org_id=rfq.builder_org_id,
         after={"vendor_id": str(body.vendor_id)},
     )
+    db.commit()
+    return rfq_view(db, rfq)
+
+
+@router.post("/{rfq_id}/send")
+def send(rfq_id: uuid.UUID, user: Editor, db: Db, clock: BizClock) -> dict[str, Any]:
+    """Open the bid window and queue invitations (sent within working hours)."""
+    rfq = get_owned(db, Rfq, rfq_id, org_id(user))
+    if rfq.status in {"invited", "bidding"}:
+        return rfq_view(db, rfq)  # already sent: idempotent
+    try:
+        send_rfqs(db, clock, rfq, actor=f"user:{user.id}")
+    except OutreachError as e:
+        raise HTTPException(409, str(e)) from None
     db.commit()
     return rfq_view(db, rfq)
