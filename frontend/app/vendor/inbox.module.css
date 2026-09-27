@@ -1,0 +1,105 @@
+.inbox {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  border: 1px solid var(--black);
+  min-height: 480px;
+}
+
+.list {
+  border-right: 1px solid var(--black);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.conv {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  background: var(--white);
+  color: var(--black);
+  border: 0;
+  border-bottom: 1px solid var(--grey-2);
+  border-radius: 0;
+  padding: 8px;
+}
+
+.activeConv {
+  background: var(--grey-1);
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  max-height: 60vh;
+}
+
+.theirs,
+.mine {
+  display: flex;
+  margin: 6px 0;
+}
+
+.mine {
+  justify-content: flex-end;
+}
+
+.bubble {
+  border: 1px solid var(--black);
+  border-radius: 2px;
+  padding: 6px 8px;
+  max-width: 75%;
+  background: var(--white);
+}
+
+.mine .bubble {
+  background: var(--grey-1);
+}
+
+.body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 6px 0 2px;
+}
+
+.compose {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  border-top: 1px solid var(--black);
+  padding: 8px;
+}
+
+.compose input {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .inbox {
+    grid-template-columns: 1fr;
+  }
+  .list {
+    border-right: 0;
+    border-bottom: 1px solid var(--black);
+    max-height: 200px;
+  }
+  .bubble {
+    max-width: 90%;
+  }
+}

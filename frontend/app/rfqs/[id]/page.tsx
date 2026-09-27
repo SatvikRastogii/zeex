@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { formatDate, statusTag } from "@/lib/format";
+import { formatDate, formatIST, statusTag } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import Guard from "../../guard";
 
@@ -13,6 +13,8 @@ type Rfq = {
   id: string;
   code: string;
   status: string;
+  bid_window_opens_at: string | null;
+  bid_window_closes_at: string | null;
   revision: number;
   stale: boolean;
   bom: { id: string; code: string };
@@ -39,7 +41,9 @@ function Matching({ rfq, onChange }: { rfq: Rfq; onChange: (r: Rfq) => void }) {
   const [error, setError] = useState<string | null>(null);
   const report = rfq.match_report;
   const proposed = rfq.shortlist.filter((s) => s.status === "proposed");
+  const active = rfq.shortlist.filter((s) => s.status !== "removed");
   const removed = rfq.shortlist.filter((s) => s.status === "removed");
+  const sent = !EDITABLE.has(rfq.status);
 
   useEffect(() => {
     if (canEdit)
@@ -59,7 +63,7 @@ function Matching({ rfq, onChange }: { rfq: Rfq; onChange: (r: Rfq) => void }) {
 
   return (
     <>
-      <h2>Matching review</h2>
+      <h2>{sent ? "Invitations" : "Matching review"}</h2>
       {error && <p className="error">{error}</p>}
       {report.warning && (
         <div className="box">
@@ -88,7 +92,7 @@ function Matching({ rfq, onChange }: { rfq: Rfq; onChange: (r: Rfq) => void }) {
         </div>
       )}
       <p className="small muted">
-        {proposed.length} vendor(s) on the shortlist · {report.eligible ?? 0} eligible
+        {sent ? `${active.length} vendor(s) invited` : `${proposed.length} vendor(s) on the shortlist`} · {report.eligible ?? 0} eligible
         {report.extra_radius_km ? ` · radius widened by ${report.extra_radius_km} km` : ""}
       </p>
       <table>
@@ -102,7 +106,7 @@ function Matching({ rfq, onChange }: { rfq: Rfq; onChange: (r: Rfq) => void }) {
           </tr>
         </thead>
         <tbody>
-          {[...proposed, ...removed].map((s) => (
+          {[...active, ...removed].map((s) => (
             <tr key={s.vendor_id}>
               <td>{s.vendor}</td>
               <td className="num">{s.score}</td>
@@ -162,6 +166,36 @@ function Matching({ rfq, onChange }: { rfq: Rfq; onChange: (r: Rfq) => void }) {
   );
 }
 
+function SendRfqs({ rfq, onChange }: { rfq: Rfq; onChange: (r: Rfq) => void }) {
+  const { me } = useSession();
+  const [error, setError] = useState<string | null>(null);
+  const canSend = me?.kind === "user" && ["owner", "purchase_manager"].includes(me.role) && rfq.status === "matching";
+  if (!canSend) return null;
+  const count = rfq.shortlist.filter((s) => s.status === "proposed").length;
+
+  async function send() {
+    setError(null);
+    try {
+      onChange(await api<Rfq>(`/rfqs/${rfq.id}/send`, { method: "POST" }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Send failed");
+    }
+  }
+
+  return (
+    <div className="box">
+      <button type="button" onClick={send} disabled={count === 0}>
+        Send RFQs to {count} vendor(s)
+      </button>
+      <p className="small muted">
+        Sent on WhatsApp (<span className="sim">Simulated</span>) between 09:00 and 20:00 IST; outside those hours they go out at the next
+        opening. One reminder at half the bid window to vendors who have not replied.
+      </p>
+      {error && <p className="error">{error}</p>}
+    </div>
+  );
+}
+
 function RfqPage() {
   const { id } = useParams<{ id: string }>();
   const [rfq, setRfq] = useState<Rfq | null>(null);
@@ -172,7 +206,9 @@ function RfqPage() {
       .then(setRfq)
       .catch((e) => setError(e.message));
   }, [id]);
-  useEffect(load, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (error && !rfq) return <p className="error">{error}</p>;
   if (!rfq) return <p className="muted">Loading...</p>;
@@ -189,6 +225,12 @@ function RfqPage() {
         Line {rfq.line.line_no}: <strong>{rfq.line.item.name}</strong> · <span className="mono">{rfq.line.qty_display}</span> · needed by{" "}
         {formatDate(rfq.line.needed_by)} · {rfq.site.name} · partial {rfq.line.partial_allowed ? "allowed" : "not allowed"}
       </p>
+      {rfq.bid_window_closes_at && rfq.bid_window_opens_at && (
+        <p className="small">
+          Bid window: {formatIST(rfq.bid_window_opens_at)} to {formatIST(rfq.bid_window_closes_at)}
+        </p>
+      )}
+      <SendRfqs rfq={rfq} onChange={setRfq} />
       <Matching rfq={rfq} onChange={setRfq} />
     </>
   );

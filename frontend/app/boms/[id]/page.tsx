@@ -87,7 +87,9 @@ function BomDetail() {
       .catch((e) => setError(e.message));
   }, [id]);
 
-  useEffect(load, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function act(path: string, confirmText?: string) {
     if (confirmText && !window.confirm(confirmText)) return;

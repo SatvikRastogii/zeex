@@ -22,10 +22,11 @@ reset: db
 	cd backend && uv run alembic downgrade base && uv run alembic upgrade head
 	cd backend && uv run python -m app.seed.run
 
-# Starts Postgres, the API on :8000 and the UI on :3000. Ctrl-C stops both.
+# Starts Postgres, the API on :8000, the job worker and the UI on :3000. Ctrl-C stops all.
 dev: install migrate
 	@trap 'kill 0' EXIT; \
 	(cd backend && uv run uvicorn app.main:app --reload --port 8000) & \
+	(cd backend && uv run python -m app.jobs.worker) & \
 	(cd frontend && pnpm dev) & \
 	wait
 
@@ -43,4 +44,4 @@ fmt:
 # the uvicorn reloader child).
 stop:
 	docker compose stop
-	-@command -v powershell >/dev/null && powershell -NoProfile -Command "foreach ($$p in 3000,8000) { Get-NetTCPConnection -LocalPort $$p -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $$_.OwningProcess -Force -ErrorAction SilentlyContinue } }" || true
+	-@command -v powershell >/dev/null && powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $$_.CommandLine -match 'uvicorn app.main|app.jobs.worker|next dev|next-server|spawn_main' } | ForEach-Object { Stop-Process -Id $$_.ProcessId -Force -ErrorAction SilentlyContinue }" || true
