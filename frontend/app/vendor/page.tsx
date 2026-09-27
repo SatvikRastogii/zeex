@@ -6,6 +6,7 @@ import { formatIST, newRef } from "@/lib/format";
 import Guard from "../guard";
 import styles from "./inbox.module.css";
 import QuoteForm from "./quote-form";
+import VendorWorkOrders from "./work-orders";
 
 type Conversation = { key: string; builder: string; rfq_code: string | null; count: number; last_body: string; last_at: string };
 type Msg = {
@@ -111,6 +112,7 @@ function Inbox() {
         In production vendors use WhatsApp only. Reply STOP to stop all messages, START to resume.
       </p>
       {error && <p className="error">{error}</p>}
+      <VendorWorkOrders />
       <div className={styles.inbox}>
         <nav className={styles.list} aria-label="Conversations">
           {convs.length === 0 && <p className="small muted">No messages yet.</p>}

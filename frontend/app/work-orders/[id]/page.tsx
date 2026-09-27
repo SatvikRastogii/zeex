@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { formatDate, formatINR, formatIST, statusTag } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import Guard from "../../guard";
+import Fulfilment from "./fulfilment";
 
 export type WorkOrderDetail = {
   id: string;
@@ -141,10 +142,7 @@ function Detail() {
           </button>
         )}
       </p>
-      <h2>Deliveries</h2>
-      {wo.deliveries.length === 0 ? <p className="muted small">Nothing dispatched yet.</p> : null}
-      <h2>Invoices</h2>
-      {wo.invoices.length === 0 ? <p className="muted small">No invoice yet.</p> : null}
+      <Fulfilment wo={wo} onChange={load} />
     </>
   );
 }

@@ -23,7 +23,8 @@ export default function TopBar() {
         </Link>
         {me?.kind === "user" && me.role !== "admin" && (
           <nav aria-label="Main" className="small">
-            <Link href="/">Dashboard</Link> · <Link href="/boms/new">New BOM</Link> · <Link href="/work-orders">Work orders</Link>
+            <Link href="/">Dashboard</Link> · <Link href="/boms/new">New BOM</Link> · <Link href="/work-orders">Work orders</Link> ·{" "}
+            <Link href="/vendors">Vendors</Link> · <Link href="/settings">Settings</Link> · <Link href="/audit">Audit</Link>
           </nav>
         )}
         {me?.kind === "user" && me.role === "admin" && (
