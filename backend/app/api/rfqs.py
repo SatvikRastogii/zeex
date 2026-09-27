@@ -8,13 +8,26 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.agents.evaluation import current_recommendation, evaluate
 from app.agents.match_runner import MATCHABLE, load_context, run_matching
 from app.agents.matching import MAX_INVITES, exclusion, score
 from app.agents.outreach import OutreachError, send_rfqs
 from app.api.deps import BizClock, Builder, Db, org_id, require
 from app.db.audit import audit
-from app.db.models import Bom, BomLine, CatalogItem, Quote, Rfq, RfqInvitation, Site, User, Vendor
+from app.db.models import (
+    Bom,
+    BomLine,
+    BuilderOrg,
+    CatalogItem,
+    Quote,
+    Rfq,
+    RfqInvitation,
+    Site,
+    User,
+    Vendor,
+)
 from app.db.tenancy import get_owned
+from app.domain.settings import org_settings
 from app.domain.states import transition
 from app.domain.units import format_qty
 from app.files import get_file_store
@@ -301,3 +314,91 @@ def quote_file(quote_id: uuid.UUID, user: Builder, db: Db) -> Response:
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+def comparison_view(db: Session, rfq: Rfq) -> dict[str, Any]:
+    rec = current_recommendation(db, rfq.id)
+    org = db.get(BuilderOrg, rfq.builder_org_id)
+    assert org is not None
+    cfg = org_settings(org.settings)
+    return {
+        "rfq_id": str(rfq.id),
+        "status": rfq.status,
+        "weights": cfg["weights"],
+        "gst_mode": cfg["gst_mode"],
+        "window_extended": rfq.window_extended,
+        "single_quote": bool(rfq.match_report.get("single_quote")),
+        "target_price_paise": rfq.target_price_paise,  # builder-only view
+        "max_price_paise": rfq.max_price_paise,
+        "recommendation": None
+        if rec is None
+        else {
+            "generated_at": rec.generated_at,
+            "ranked": rec.ranked,
+            "l1_vendor_id": str(rec.l1_vendor_id) if rec.l1_vendor_id else None,
+            "lowest_price_vendor_id": str(rec.lowest_price_vendor_id)
+            if rec.lowest_price_vendor_id
+            else None,
+            "split_proposal": rec.split_proposal,
+        },
+    }
+
+
+@router.get("/{rfq_id}/comparison")
+def comparison(rfq_id: uuid.UUID, user: Builder, db: Db) -> dict[str, Any]:
+    return comparison_view(db, get_owned(db, Rfq, rfq_id, org_id(user)))
+
+
+REEVALUABLE = {"evaluating", "negotiating", "awaiting_approval"}
+
+
+@router.post("/{rfq_id}/evaluate")
+def reevaluate(rfq_id: uuid.UUID, user: Editor, db: Db, clock: BizClock) -> dict[str, Any]:
+    """Score the confirmed quotes again (for example after changing weights)."""
+    rfq = get_owned(db, Rfq, rfq_id, org_id(user))
+    if rfq.status not in REEVALUABLE:
+        raise HTTPException(
+            409,
+            f"{rfq.public_code} is {rfq.status}; quotes are compared after the bid window closes",
+        )
+    evaluate(db, clock, rfq, actor=f"user:{user.id}")
+    db.commit()
+    return comparison_view(db, rfq)
+
+
+class LimitsIn(BaseModel):
+    """Private to the builder: never shown to vendors, never sent to the LLM."""
+
+    target_price_paise: int | None = Field(default=None, gt=0)
+    max_price_paise: int | None = Field(default=None, gt=0)
+
+
+@router.put("/{rfq_id}/limits")
+def set_limits(
+    rfq_id: uuid.UUID, body: LimitsIn, user: Editor, db: Db, clock: BizClock
+) -> dict[str, Any]:
+    rfq = get_owned(db, Rfq, rfq_id, org_id(user))
+    if (
+        body.target_price_paise
+        and body.max_price_paise
+        and body.target_price_paise > body.max_price_paise
+    ):
+        raise HTTPException(422, "Target price cannot be above the maximum price")
+    rfq.target_price_paise, rfq.max_price_paise = body.target_price_paise, body.max_price_paise
+    audit(
+        db,
+        clock,
+        actor=f"user:{user.id}",
+        action="rfq.limits",
+        entity="rfq",
+        entity_id=rfq.id,
+        org_id=rfq.builder_org_id,
+        after={
+            "target_set": body.target_price_paise is not None,
+            "max_set": body.max_price_paise is not None,
+        },
+    )
+    if rfq.status in REEVALUABLE:
+        evaluate(db, clock, rfq, actor=f"user:{user.id}")
+    db.commit()
+    return comparison_view(db, rfq)
