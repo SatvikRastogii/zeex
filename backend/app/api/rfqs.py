@@ -11,14 +11,19 @@ from sqlalchemy.orm import Session
 from app.agents.evaluation import current_recommendation, evaluate
 from app.agents.match_runner import MATCHABLE, load_context, run_matching
 from app.agents.matching import MAX_INVITES, exclusion, score
+from app.agents.negotiation import maybe_complete, take_over, threads_of
 from app.agents.outreach import OutreachError, send_rfqs
 from app.api.deps import BizClock, Builder, Db, org_id, require
+from app.channels.base import Outbound
+from app.channels.simulated import get_channel, window_open
 from app.db.audit import audit
 from app.db.models import (
     Bom,
     BomLine,
     BuilderOrg,
     CatalogItem,
+    Message,
+    NegotiationThread,
     Quote,
     Rfq,
     RfqInvitation,
@@ -402,3 +407,122 @@ def set_limits(
         evaluate(db, clock, rfq, actor=f"user:{user.id}")
     db.commit()
     return comparison_view(db, rfq)
+
+
+def _thread_out(db: Session, t: NegotiationThread, vendor_name: str) -> dict[str, Any]:
+    msgs = db.scalars(
+        select(Message)
+        .where(Message.thread_id == t.id)
+        .order_by(Message.sent_at, Message.created_at)
+    )
+    return {
+        "id": str(t.id),
+        "code": t.public_code,
+        "vendor_id": str(t.vendor_id),
+        "vendor": vendor_name,
+        "state": t.state,
+        "round": t.round,
+        "opening_offer_paise": t.opening_offer_paise,
+        "current_offer_paise": t.current_offer_paise,
+        "last_counter_paise": t.last_counter_paise,
+        "deadline_at": t.deadline_at,
+        "reply_due_at": t.reply_due_at,
+        "handoff_reason": t.handoff_reason,
+        "taken_over": t.handed_to_human_by is not None,
+        "messages": [
+            {
+                "id": str(m.id),
+                "direction": m.direction,
+                "body": m.body,
+                "sent_at": m.sent_at,
+                "status": m.status,
+                "stale": bool((m.payload or {}).get("stale")),
+                "by_human": bool((m.payload or {}).get("by_user")),
+            }
+            for m in msgs
+        ],
+    }
+
+
+@router.get("/{rfq_id}/negotiations")
+def negotiations(rfq_id: uuid.UUID, user: Builder, db: Db) -> list[dict[str, Any]]:
+    rfq = get_owned(db, Rfq, rfq_id, org_id(user))
+    names = {v.id: v.display_name for v in db.scalars(select(Vendor))}
+    return [_thread_out(db, t, names.get(t.vendor_id, "")) for t in threads_of(db, rfq.id)]
+
+
+neg_router = APIRouter(prefix="/negotiations", tags=["negotiation"])
+TakeOver = Annotated[User, Depends(require("negotiation.take_over"))]
+
+
+@neg_router.post("/{thread_id}/take-over")
+def take_over_thread(
+    thread_id: uuid.UUID, user: TakeOver, db: Db, clock: BizClock
+) -> dict[str, Any]:
+    t = get_owned(db, NegotiationThread, thread_id, org_id(user))
+    if t.handed_to_human_by is None:
+        if t.state in ("closed",):
+            raise HTTPException(409, "This negotiation is already closed")
+        t.handed_to_human_by = user.id
+        if t.state != "needs_human":
+            take_over(db, clock, t, user.id, user.name)
+        else:
+            t.handoff_reason = f"{t.handoff_reason}; taken over by {user.name}"
+        db.commit()
+    vendor = db.get(Vendor, t.vendor_id)
+    return _thread_out(db, t, vendor.display_name if vendor else "")
+
+
+class ManualMessage(BaseModel):
+    text: str = Field(min_length=1, max_length=1000)
+
+
+@neg_router.post("/{thread_id}/message")
+def manual_message(
+    thread_id: uuid.UUID, body: ManualMessage, user: TakeOver, db: Db, clock: BizClock
+) -> dict[str, Any]:
+    """Only after taking over: the builder writes to the vendor directly."""
+    t = get_owned(db, NegotiationThread, thread_id, org_id(user))
+    if t.handed_to_human_by is None:
+        raise HTTPException(409, "Take over the negotiation first")
+    vendor = db.get(Vendor, t.vendor_id)
+    rfq = db.get(Rfq, t.rfq_id)
+    assert vendor is not None and rfq is not None
+    msg = Outbound(
+        vendor=vendor,
+        org_id=t.builder_org_id,
+        rfq_id=t.rfq_id,
+        thread_id=t.id,
+        payload={"by_user": str(user.id)},
+    )
+    if window_open(db, vendor.id, clock.now()):
+        msg.text = body.text
+    else:
+        msg.template, msg.params = (
+            "counter_offer",
+            {"rfq_code": rfq.public_code, "message": body.text},
+        )
+    get_channel().send(db, clock, msg)
+    db.commit()
+    return _thread_out(db, t, vendor.display_name)
+
+
+@neg_router.post("/{thread_id}/close")
+def close_thread(thread_id: uuid.UUID, user: TakeOver, db: Db, clock: BizClock) -> dict[str, Any]:
+    """The builder ends a handed-over thread; the vendor's last confirmed offer stands."""
+    t = get_owned(db, NegotiationThread, thread_id, org_id(user))
+    if t.state != "closed":
+        transition(
+            db,
+            clock,
+            "negotiation",
+            t,
+            "closed",
+            actor=f"user:{user.id}",
+            field="state",
+            reason="closed by builder",
+        )
+        maybe_complete(db, clock, t.rfq_id)
+        db.commit()
+    vendor = db.get(Vendor, t.vendor_id)
+    return _thread_out(db, t, vendor.display_name if vendor else "")

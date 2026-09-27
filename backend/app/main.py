@@ -28,6 +28,7 @@ for r in (
     boms.router,
     rfqs.router,
     rfqs.quotes_router,
+    rfqs.neg_router,
     vendor.router,
     admin.router,
 ):
