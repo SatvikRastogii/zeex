@@ -67,8 +67,14 @@
 - Cancellation of BOMs and POs with notifications and capacity release; BOM status advances with awards.
 - UI: recommendation and approval panel (savings, lowest price, runner-up, override), work orders list and detail, builder navigation, dashboard "Needs action".
 
+## Stage 11: Delivery, invoices, ratings and closure (done)
+- Dispatch (vendor), receipt with photo (site), invoice check with flags and human acceptance, close with shortfall notes; price history and vendor ratings; RFQ/BOM closure.
+- Remaining builder screens: Vendors directory (block/unblock), Settings (owner), Audit log.
+- UI: fulfilment on the work order page; "My work orders" in the Vendor Inbox.
+- Demo clock advance now waits for the worker to settle (deterministic demos).
+
 ## Next
-Stage 11: delivery, invoices, ratings and closure.
+Stage 12: demo experience.
 
 ## Known gaps
 - `make demo` arrives with the demo panel (Stage 12).

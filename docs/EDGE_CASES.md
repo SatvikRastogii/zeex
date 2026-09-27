@@ -203,6 +203,23 @@ Filled in stage by stage; gaps are listed at the bottom with a reason.
 | Exact address before award | Only in the winner's PO message | `test_approvals.py::test_approve_issues_po_to_winner_and_tells_the_others` |
 | Other org's POs | 404 | `test_approvals.py::test_cross_tenant` |
 
+## Delivery, invoices, ratings and closure (Stage 11)
+
+| Case | Behaviour | Test |
+|---|---|---|
+| Short delivery | Flagged; PO stays open; close needs a shortfall note; quantity accuracy drops | `test_deliveries.py::test_short_delivery_flagged_and_closed_with_note` |
+| Over-delivery | Flagged; only the ordered quantity accepted | `test_deliveries.py::test_over_delivery_accepts_only_ordered_quantity` |
+| Receipt before dispatch | Blocked | `test_deliveries.py::test_receipt_before_dispatch_blocked` |
+| Invoice price differs from PO | Flagged; no auto-accept; accepted only by owner/PM with a reason | `test_deliveries.py::test_invoice_price_mismatch_needs_a_person` |
+| Invoice for a different PO | Flagged | `test_deliveries.py::test_invoice_for_a_different_po` |
+| Delivery after needed-by | `late_days` flag; on-time rating drops | `test_deliveries.py::test_late_delivery_lowers_on_time_rating` |
+| Partial deliveries | Only when the PO allows; remaining tracked | `test_deliveries.py::test_partial_dispatch_needs_partial_allowed` |
+| Closure | Price history appended; ratings updated; RFQ and BOM closed | `test_deliveries.py::test_full_lifecycle_to_closure` |
+| Dispatch twice (retry) / unconfirmed PO / other vendor | Idempotent / 409 / 404 | `test_deliveries.py::test_dispatch_is_idempotent`, `::test_unconfirmed_po_cannot_be_dispatched`, `::test_other_vendor_cannot_dispatch` |
+| Receipt photo | Required, must be an image | `test_deliveries.py::test_photo_is_required_and_must_be_an_image` |
+| Site engineer | Can confirm delivery, cannot close | `test_deliveries.py::test_site_engineer_receives_but_cannot_close` |
+| Vendor directory / audit scope | Linked vendors only; own org's audit only | `test_directory.py` |
+
 ## Gaps
 
 | Case | Reason |
