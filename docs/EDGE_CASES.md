@@ -157,6 +157,7 @@ Filled in stage by stage; gaps are listed at the bottom with a reason.
 | Hidden-instruction quote | Ranking unaffected | `test_evaluation_api.py::test_hidden_instruction_quote_does_not_change_ranking` |
 | Weight change | Re-score changes the order | `test_evaluation_api.py::test_weight_change_rescores` |
 | Clock jump replay | Each job runs at its own time | `test_jobs.py::test_catch_up_runs_each_job_at_its_own_time` |
+| Unloading charge | Spread over the quantity in landed cost | `test_evaluation.py::test_unloading_spread_over_quantity` |
 
 ## Negotiation (Stage 9)
 
@@ -181,6 +182,7 @@ Filled in stage by stage; gaps are listed at the bottom with a reason.
 | Target/max/other names in prompts | Never | `test_negotiation.py::test_target_and_max_never_in_any_prompt` |
 | Pricing: floor, 3%/2%/final, match benchmark | As specified | `test_pricing.py` |
 | Take-over permissions and tenancy | Site engineer 403; other org 404 | `test_negotiation.py::test_take_over_permissions_and_tenancy` |
+| Automation disclosure | First message on every thread: "Automated assistant for {builder}." | `test_negotiation.py::test_negotiation_starts_with_disclosed_automation` |
 
 ## Approval, work orders and conflicts (Stage 10)
 
@@ -202,6 +204,7 @@ Filled in stage by stage; gaps are listed at the bottom with a reason.
 | Cancel after PO issued | PO cancelled, vendor notified, capacity released | `test_approvals.py::test_cancel_after_po_issued_releases_capacity`, `::test_cancel_single_po` |
 | Exact address before award | Only in the winner's PO message | `test_approvals.py::test_approve_issues_po_to_winner_and_tells_the_others` |
 | Other org's POs | 404 | `test_approvals.py::test_cross_tenant` |
+| Losing vendors | Polite `not_selected`; exact address only to the winner | `test_approvals.py::test_approve_issues_po_to_winner_and_tells_the_others` |
 
 ## Delivery, invoices, ratings and closure (Stage 11)
 
@@ -220,9 +223,28 @@ Filled in stage by stage; gaps are listed at the bottom with a reason.
 | Site engineer | Can confirm delivery, cannot close | `test_deliveries.py::test_site_engineer_receives_but_cannot_close` |
 | Vendor directory / audit scope | Linked vendors only; own org's audit only | `test_directory.py` |
 
+## Demo and end-to-end (Stages 12–13)
+
+| Case | Behaviour | Test |
+|---|---|---|
+| `make reset && make demo` | Every scenario reaches its demo point through the real API, on seeded vendor history | `test_demo.py::test_every_scenario_reaches_its_demo_point` |
+| Two builders, one vendor's capacity | Second approval refused, capacity untouched | `test_demo.py::test_capacity_conflict_blocks_second_builder` |
+| Full run | Scenario 1 from publish to a closed order with the demo clock | `test_demo.py::test_play_runs_scenario_one_to_a_closed_order` |
+| Persona auto-reply | Vendors answer by themselves; slow never answers, vague never quotes | `test_demo.py::test_personas_reply_by_themselves` |
+| Control panel | Admin only; persona and mode settings validated | `test_demo.py::test_demo_panel_settings_and_personas` |
+| Happy path in the browser | Sign in with OTP → approve L1 → work order listed | `e2e: journeys.spec.ts › happy path` |
+| Big order in the browser | Approve split → one work order per vendor | `e2e: journeys.spec.ts › big order` |
+| Capacity conflict in the browser | Refusal shown → approve another vendor | `e2e: journeys.spec.ts › capacity conflict` |
+| Hidden text in a PDF | Flagged, read at the printed ₹400, RFQ still bidding, nothing recommended | `e2e: journeys.spec.ts › PDF with hidden instructions` |
+| No network in tests | LLM is the mock, WhatsApp is simulated; no test calls an external API | whole suite (`conftest.py` forces `LLM_PROVIDER=mock` and clears the Gemini key) |
+
 ## Gaps
 
 | Case | Reason |
 |---|---|
 | Live Gemini parsing | No API key available in this environment; the provider is implemented against the documented REST API but only the mock is exercised by tests. |
 | Brand-specific BOM lines | BOM lines have no brand field; grade is enforced through the catalog item. Add a brand column if clients need brand-locked lines. |
+| Real WhatsApp Cloud API (webhook signature, media expiry, Meta templates) | Stage 14 not chosen; the channel is simulated behind `MessageChannel`. |
+| AWS (Step Functions, SQS, S3, SES) | Stage 15 not chosen; see `docs/ARCHITECTURE.md` for the mapping. |
+| Dispatch vehicle number | Stored and audited, but no test asserts its formatting (upper-case, 20 chars); low risk. |
+| Playwright on a clean database | The journeys reset and reload the dev database in global setup, so they are not run in CI against `procure_test`. |
