@@ -37,3 +37,18 @@ Newest at the bottom. Each entry: decision, reason.
 - **Starlette test-client deprecation warning** (suggests `httpx2`). Left as is: harmless, and switching would add an unapproved dependency.
 - **Windows note:** `uvicorn --reload` spawns a child that can outlive `make dev` if the parent is killed without Ctrl-C. Ctrl-C in a terminal stops both.
 - **Attribution conflict.** The harness default adds an AI co-author trailer; PROMPT.md 2.2.3 forbids it. PROMPT.md wins. The `commit-msg` hook rejects such lines (verified in Stage 1).
+- **Stage-end gate commands are not piped through `tail`.** One Stage 2 commit (`809468a`) went in with a mypy error that `| tail` hid; fixed in the next commit (`c6654cf`).
+
+## Stage 2
+
+- **Quantities are integer milli-units of the item's canonical unit** (`qty_canonical_milli`, `qty_milli`). "Integer in smallest unit" had to cover 2.5 tonnes of TMT and 30 bags of cement uniformly; milli-units do both exactly. Unit factors are exact fractions (`numerator`/`denominator`); a conversion that is not a whole number of milli-units is rejected.
+- **IST is a fixed +05:30 offset** (`app/jobs/clock.py`), not `zoneinfo`: Windows Python has no tz database, `tzdata` would be a new dependency, and IST has had no DST since 1945.
+- **Public-ID sequences do not reset each year.** The year segment is the IST year at creation, and the counter keeps counting (`BOM-2027-00043` can follow `BOM-2026-00042`). Codes stay unique without a per-year sequence.
+- **RFQ and delivery codes are derived**, not sequenced: `RFQ-<bom number>-<line>` and `DLV-<po number>-<n>`, each with a unique constraint.
+- **`builder_org_id` on every tenant-owned row**, including child rows (lines, quotes, threads, deliveries, ...), so every tenant filter is a single column check.
+- **Extra columns beyond the Section 8 minimum**, each needed by a later stage: `catalog_items.code` (stable key), `vendors.item_codes`, `vendors.persona` (demo only), per-dimension reliability in basis points, `sites.area` (coarse location shown to vendors before award) and site contact fields, quote `raw_text`/`stated_total_paise`/`received_at`, thread counters for unclear replies/parse failures/disclosure asks, `messages.rfq_id`/`status`, `recommendations.is_current`, and a single-row `demo_clock` table so API and worker share the demo offset.
+- **Audit log is append-only by trigger** on UPDATE/DELETE. TRUNCATE (tests, `make reset`) is not blocked; `make reset` is the only way to wipe it and is for demo data.
+- **GSTIN check is format only** (the spec says "validated format"). The checksum is not verified.
+- **GST rates in the seed catalog are demo defaults** (cement 18%, bricks/AAC 12%, sand/aggregate 5%, steel/tiles 18%). They are not tax advice; each quote carries its own rate.
+- **Seed history:** 30 closed work orders over the last ~6 months relative to the IST date at seed time, generated from a fixed random seed. A re-run skips existing history (keyed by BOM title) and recomputes vendor ratings from it, so two runs give identical results.
+- **Phone numbers** use `+91 90000 xxxxx` (admin 0xxxx, builders 1xxxx, vendors 2xxxx) and are fictional. The simulated channel never sends to them.
