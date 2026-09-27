@@ -1,0 +1,17 @@
+#!/bin/sh
+# Reject commit messages carrying AI attribution or emoji (PROMPT.md 2.2.3).
+msg_file="$1"
+fail=0
+
+if grep -inE 'co-authored-by:[[:space:]]*claude|generated with (\[)?claude|claude-session|claude\.(ai|com)' "$msg_file" >/dev/null; then
+  echo "commit-msg: forbidden attribution line:" >&2
+  grep -inE 'co-authored-by:[[:space:]]*claude|generated with (\[)?claude|claude-session|claude\.(ai|com)' "$msg_file" >&2
+  fail=1
+fi
+
+if LC_ALL=C.UTF-8 grep -nP '[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{FE0F}]' "$msg_file" >/dev/null 2>&1; then
+  echo "commit-msg: emoji are not allowed in commit messages" >&2
+  fail=1
+fi
+
+[ "$fail" -eq 0 ] || { echo "commit-msg: commit rejected" >&2; exit 1; }
