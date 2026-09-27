@@ -16,12 +16,16 @@ dependencies = [
 package = false
 
 [tool.ruff]
+extend-exclude = ["alembic"]
 line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "SIM"]
 ignore = ["S101", "B008"]
+
+[tool.ruff.lint.isort]
+known-third-party = ["alembic"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "B"]
