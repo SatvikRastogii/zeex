@@ -44,4 +44,4 @@ fmt:
 # the uvicorn reloader child).
 stop:
 	docker compose stop
-	-@command -v powershell >/dev/null && powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $$_.CommandLine -match 'uvicorn app.main|app.jobs.worker|next dev|next-server|spawn_main' } | ForEach-Object { Stop-Process -Id $$_.ProcessId -Force -ErrorAction SilentlyContinue }" || true
+	-@command -v powershell >/dev/null && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stop-dev.ps1 || true
