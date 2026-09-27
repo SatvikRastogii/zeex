@@ -160,7 +160,7 @@ function BomDetail() {
               <td className="small">
                 {ln.rfq ? (
                   <>
-                    <span className="mono">{ln.rfq.code}</span> <span className="status">{statusTag(ln.rfq.status)}</span>
+                    <Link className="mono" href={`/rfqs/${ln.rfq.id}`}>{ln.rfq.code}</Link> <span className="status">{statusTag(ln.rfq.status)}</span>
                     {ln.rfq.stale && <span className="status"> [CHANGED rev {ln.rfq.revision}]</span>}
                   </>
                 ) : (
