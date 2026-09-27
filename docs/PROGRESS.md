@@ -20,9 +20,16 @@
 - Endpoints: auth (request/verify/logout/me/demo-accounts), org settings (weights sum to 100), users (owner only), sites, vendor messages (own only), admin clock.
 - UI: sign-in with the demo OTP banner and demo accounts table, top bar with user · role · org · demo clock, logout, guarded builder/vendor/admin pages.
 
+## Stage 4: Catalog, BOM upload and validation (done)
+- State machines for BOM, RFQ, quote, negotiation and work order as explicit tables; every transition audited.
+- CSV/XLSX reading, header synonyms, per-row validation (item alias/trigram match, units, dates, site, partial), duplicate merge.
+- Endpoints: catalog, templates (CSV/XLSX), validate (file or rows), create (idempotent), list, detail, original file, publish (RFQs per line), line revision, cancel.
+- UI: dashboard (open BOMs + status counts), New BOM (upload or type rows, inline errors, item chooser), BOM detail (publish, cancel, edit line).
+- `docs/EDGE_CASES.md` started (Stages 2–4).
+
 ## Next
-Stage 4: catalog, BOM upload and validation.
+Stage 5: vendor matching.
 
 ## Known gaps
 - `make demo` arrives with the demo panel (Stage 12).
-- State-machine transition tables arrive with the stages that drive each entity.
+- Stale RFQs are not yet re-sent to vendors (needs outreach, Stage 6).
