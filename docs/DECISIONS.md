@@ -186,3 +186,14 @@ Newest at the bottom. Each entry: decision, reason.
 - **`make demo`** loads all scenarios; `make reset && make demo` is the clean path.
 - **Relative `STORAGE_DIR` is anchored at the repo root** (it was resolving against the working directory, so API files landed in `backend/storage`).
 - **Approval panel** can approve any other qualified vendor who can cover the full quantity (needed for the capacity-conflict runner-up).
+
+## Stage 13
+
+- **Playwright runs against the dev stack**, not the test database. Global setup runs `python -m app.demo.load --reset --all`, and the config starts the API and UI only if they are not already running. One worker, because the journeys approve orders on shared demo data.
+- **Demo test seeds order history** exactly as `make reset` does. Without it every vendor had default ratings, which hid that Shree Balaji outscored Delhi Cement Depot in scenario 1 on real data. Scenario 1 now has Balaji hold at ₹398, and Delhi's ₹380 is L1 in both.
+- **Tests force `LLM_PROVIDER=mock`** and clear the Gemini key in `conftest.py`, so no test can reach the network even with a key in `.env`.
+- **Graphify (2,088 nodes, 7,360 edges, no import cycles).** Smells worth knowing:
+  - `agents/negotiation.py` (≈700 lines) and `api/boms.py` / `api/rfqs.py` (≈530 each) are the largest modules. Split negotiation into pricing glue, reply handling and timers if it grows further.
+  - `app.demo.scenarios` imports `app.main` lazily to avoid a real admin → scenarios → main cycle. That is acceptable for demo-only code, but keep it out of product code.
+  - The most connected nodes are `Clock`/`DbDemoClock`, `audit()` and `transition()`. That is intended: every rule reads the clock, and every change is audited through one path.
+

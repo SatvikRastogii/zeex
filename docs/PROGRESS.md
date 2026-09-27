@@ -79,8 +79,14 @@
 - Demo Control Panel: scenarios, reset, full run, personas, clock, jobs, event log.
 - `make demo`; `docs/DEMO_SCRIPT.md` (10-minute click-by-click with talking points).
 
+## Stage 13: Hardening and documentation (done)
+- Playwright journeys (`frontend/e2e/`, `make e2e`): happy path, big order split, capacity conflict, PDF with hidden text.
+- Fixed: scenario 1's L1 depended on vendor history the demo test did not seed; the test now seeds it.
+- Tests force the mock LLM provider, so a Gemini key in `.env` cannot make a test call the network.
+- `docs/EDGE_CASES.md` complete (every cited test ID checked to exist; gaps listed), `docs/ARCHITECTURE.md`, README setup in three commands.
+
 ## Next
-Stage 13: hardening and documentation.
+Optional Stage 14 (real WhatsApp) and Stage 15 (AWS) were not chosen in Stage 0.
 
 ## Known gaps
 - Live Gemini is not exercised (no key); the mock provider is labelled Simulated in the UI.
