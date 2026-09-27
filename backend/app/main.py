@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import admin, auth, boms, health, org, rfqs, vendor
 from app.config import get_settings
+from app.jobs import handlers  # noqa: F401  registers job handlers and inbound routers
 
 settings = get_settings()
 logging.basicConfig(
@@ -26,6 +27,7 @@ for r in (
     boms.catalog_router,
     boms.router,
     rfqs.router,
+    rfqs.quotes_router,
     vendor.router,
     admin.router,
 ):

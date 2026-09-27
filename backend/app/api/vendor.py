@@ -2,16 +2,25 @@
 across every builder they work with."""
 
 import uuid
-from datetime import datetime
-from typing import Any
+from datetime import date, datetime
+from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import Select, select
 
+from app.agents.quote_intake import form_quote
+from app.agents.quote_parser import MAX_FILE_BYTES, VENDOR_MESSAGES
 from app.api.deps import BizClock, Db, VendorUser
+from app.channels.base import Outbound
 from app.channels.inbound import Inbound, receive
-from app.db.models import BuilderOrg, Message, Rfq, RfqInvitation
+from app.channels.simulated import get_channel
+from app.config import get_settings
+from app.db.models import BuilderOrg, Message, Rfq, RfqInvitation, Vendor
+from app.files import get_file_store
+from app.jobs.clock import ist_today
+from app.llm.schemas import ParsedQuote
+from app.seed.sample_docs import build as build_samples
 
 router = APIRouter(prefix="/vendor", tags=["vendor"])
 
@@ -106,10 +115,26 @@ def conversation(key: str, vendor: VendorUser, db: Db) -> dict[str, Any]:
     }
 
 
+def _invited_rfq(db: Db, vendor: Vendor, rfq_id: uuid.UUID | None) -> Rfq | None:
+    """The RFQ if this vendor was invited to it; 404 otherwise (never leak other RFQs)."""
+    if rfq_id is None:
+        return None
+    invited = db.scalars(
+        select(RfqInvitation).where(
+            RfqInvitation.rfq_id == rfq_id, RfqInvitation.vendor_id == vendor.id
+        )
+    ).first()
+    rfq = db.get(Rfq, rfq_id)
+    if invited is None or rfq is None:
+        raise HTTPException(404, "Not found")
+    return rfq
+
+
 class ReplyIn(BaseModel):
     client_message_id: str = Field(min_length=6, max_length=100)
     text: str = Field(default="", max_length=4000)
     button: str | None = Field(default=None, max_length=50)
+    reply_to: uuid.UUID | None = None  # the message whose button was tapped
     rfq_id: uuid.UUID | None = None
     sent_at: datetime | None = None
 
@@ -117,19 +142,17 @@ class ReplyIn(BaseModel):
 @router.post("/messages")
 def reply(body: ReplyIn, vendor: VendorUser, db: Db, clock: BizClock) -> dict[str, Any]:
     """Vendor sends a message. Re-sending the same client_message_id is a no-op."""
-    org_id = None
-    if body.rfq_id is not None:
-        invited = db.scalars(
-            select(RfqInvitation).where(
-                RfqInvitation.rfq_id == body.rfq_id, RfqInvitation.vendor_id == vendor.id
-            )
-        ).first()
-        rfq = db.get(Rfq, body.rfq_id)
-        if invited is None or rfq is None:
-            raise HTTPException(404, "Not found")
-        org_id = rfq.builder_org_id
+    rfq = _invited_rfq(db, vendor, body.rfq_id)
     if not body.text.strip() and not body.button:
         raise HTTPException(422, "Empty message")
+    extra: dict[str, Any] = {}
+    if body.reply_to is not None:
+        original = db.get(Message, body.reply_to)
+        if original is None or original.vendor_id != vendor.id:
+            raise HTTPException(404, "Not found")
+        extra["reply_to"] = str(original.id)
+        if "pick_for" in (original.payload or {}):
+            extra["pick_for"] = original.payload["pick_for"]
     msg, created = receive(
         db,
         clock,
@@ -139,9 +162,150 @@ def reply(body: ReplyIn, vendor: VendorUser, db: Db, clock: BizClock) -> dict[st
             text=body.text or (body.button or ""),
             button=body.button,
             rfq_id=body.rfq_id,
-            org_id=org_id,
+            org_id=rfq.builder_org_id if rfq else None,
             sent_at=body.sent_at,
+            payload=extra,
         ),
     )
     db.commit()
     return {"message": _msg_out(msg), "duplicate": not created}
+
+
+class QuoteForm(BaseModel):
+    """The 'Submit quote' form. Amounts are rupees as typed (validated, not floats)."""
+
+    client_message_id: str = Field(min_length=6, max_length=100)
+    rfq_id: uuid.UUID
+    unit_price: str = Field(pattern=r"^\d{1,9}(\.\d{1,2})?$")
+    price_unit: Literal["bag", "tonne", "kg", "cft", "brass", "nos", "box"]
+    gst_included: bool = False
+    gst_percent: str | None = Field(default=None, pattern=r"^\d{1,2}(\.\d{1,2})?$")
+    freight: str | None = Field(default=None, pattern=r"^\d{1,9}(\.\d{1,2})?$")
+    freight_included: bool = True
+    unloading: str | None = Field(default=None, pattern=r"^\d{1,9}(\.\d{1,2})?$")
+    delivery_date: date
+    validity_until: date
+    payment_terms_days: int = Field(ge=0, le=365)
+    brand: str | None = Field(default=None, max_length=60)
+    qty_offered: str | None = Field(default=None, pattern=r"^\d{1,9}(\.\d{1,3})?$")
+
+
+@router.post("/quotes")
+def submit_form(body: QuoteForm, vendor: VendorUser, db: Db, clock: BizClock) -> dict[str, Any]:
+    rfq = _invited_rfq(db, vendor, body.rfq_id)
+    assert rfq is not None
+    fields = body.model_dump(exclude={"client_message_id", "rfq_id"})
+    msg, _ = receive(
+        db,
+        clock,
+        Inbound(
+            vendor=vendor,
+            client_message_id=body.client_message_id,
+            text=f"Quote form: {body.unit_price} per {body.price_unit}",
+            rfq_id=rfq.id,
+            org_id=rfq.builder_org_id,
+            payload={
+                "form_submission": {k: str(v) if v is not None else None for k, v in fields.items()}
+            },
+        ),
+    )
+    parsed = ParsedQuote.model_validate(
+        {**{k: v for k, v in fields.items() if v is not None}, "confidence": 100}
+    )
+    q = form_quote(db, clock, vendor, rfq, parsed, msg.id)
+    db.commit()
+    return {"quote_id": str(q.id), "code": q.public_code, "status": q.status, "flags": q.flags}
+
+
+def _receive_file(
+    db: Db,
+    clock: BizClock,
+    vendor: Vendor,
+    rfq: Rfq | None,
+    data: bytes,
+    filename: str,
+    client_id: str,
+    caption: str,
+) -> Message:
+    too_big = len(data) > MAX_FILE_BYTES
+    ref = None if too_big else get_file_store().save(f"quotes/{vendor.id}", filename, data)
+    msg, created = receive(
+        db,
+        clock,
+        Inbound(
+            vendor=vendor,
+            client_message_id=client_id,
+            text=caption,
+            rfq_id=rfq.id if rfq else None,
+            org_id=rfq.builder_org_id if rfq else None,
+            payload={"file_ref": ref, "filename": filename, "size": len(data)}
+            if ref
+            else {"filename": filename, "size": len(data)},
+        ),
+    )
+    if created and too_big:
+        get_channel().send(
+            db,
+            clock,
+            Outbound(
+                vendor=vendor,
+                text=VENDOR_MESSAGES["too_large"],
+                org_id=msg.builder_org_id,
+                rfq_id=msg.rfq_id,
+            ),
+        )
+    return msg
+
+
+@router.post("/files")
+async def upload_file(
+    request: Request,
+    filename: str,
+    client_message_id: str,
+    vendor: VendorUser,
+    db: Db,
+    clock: BizClock,
+    rfq_id: uuid.UUID | None = None,
+    caption: str = "",
+) -> dict[str, Any]:
+    """Raw file bytes in the body (PDF or photo), like sending a document on WhatsApp."""
+    rfq = _invited_rfq(db, vendor, rfq_id)
+    data = await request.body()
+    if len(data) > MAX_FILE_BYTES + 1024 * 1024:
+        raise HTTPException(413, VENDOR_MESSAGES["too_large"])
+    msg = _receive_file(
+        db, clock, vendor, rfq, data, filename[:120], client_message_id, caption[:500]
+    )
+    db.commit()
+    return {"message": _msg_out(msg)}
+
+
+@router.get("/samples")
+def samples(_: VendorUser, clock: BizClock) -> list[dict[str, str]]:
+    """Demo only: generated sample quotation documents to send from the inbox."""
+    if not get_settings().demo_mode:
+        raise HTTPException(404, "Not found")
+    return [
+        {"name": s.name, "label": s.label, "filename": s.filename}
+        for s in build_samples(ist_today(clock)).values()
+    ]
+
+
+@router.post("/samples/{name}")
+def send_sample(
+    name: str,
+    client_message_id: str,
+    vendor: VendorUser,
+    db: Db,
+    clock: BizClock,
+    rfq_id: uuid.UUID | None = None,
+) -> dict[str, Any]:
+    if not get_settings().demo_mode:
+        raise HTTPException(404, "Not found")
+    sample = build_samples(ist_today(clock)).get(name)
+    if sample is None:
+        raise HTTPException(404, "Not found")
+    rfq = _invited_rfq(db, vendor, rfq_id)
+    msg = _receive_file(db, clock, vendor, rfq, sample.data, sample.filename, client_message_id, "")
+    db.commit()
+    return {"message": _msg_out(msg)}

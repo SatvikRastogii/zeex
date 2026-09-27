@@ -3,7 +3,7 @@
 import uuid
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -13,10 +13,11 @@ from app.agents.matching import MAX_INVITES, exclusion, score
 from app.agents.outreach import OutreachError, send_rfqs
 from app.api.deps import BizClock, Builder, Db, org_id, require
 from app.db.audit import audit
-from app.db.models import Bom, BomLine, CatalogItem, Rfq, RfqInvitation, Site, User, Vendor
+from app.db.models import Bom, BomLine, CatalogItem, Quote, Rfq, RfqInvitation, Site, User, Vendor
 from app.db.tenancy import get_owned
 from app.domain.states import transition
 from app.domain.units import format_qty
+from app.files import get_file_store
 
 router = APIRouter(prefix="/rfqs", tags=["rfqs"])
 
@@ -229,3 +230,74 @@ def send(rfq_id: uuid.UUID, user: Editor, db: Db, clock: BizClock) -> dict[str, 
         raise HTTPException(409, str(e)) from None
     db.commit()
     return rfq_view(db, rfq)
+
+
+def quote_out(q: Quote, vendor_name: str) -> dict[str, Any]:
+    return {
+        "id": str(q.id),
+        "code": q.public_code,
+        "vendor_id": str(q.vendor_id),
+        "vendor": vendor_name,
+        "revision": q.revision,
+        "source": q.source,
+        "status": q.status,
+        "unit_price_paise": q.unit_price_paise,
+        "price_unit": q.price_unit,
+        "price_per_canonical_paise": q.price_per_canonical_paise,
+        "gst_included": q.gst_included,
+        "gst_bp": q.gst_bp,
+        "freight_paise": q.freight_paise,
+        "freight_included": q.freight_included,
+        "unloading_paise": q.unloading_paise,
+        "delivery_date": q.delivery_date,
+        "validity_until": q.validity_until,
+        "payment_terms_days": q.payment_terms_days,
+        "brand": q.brand,
+        "qty_offered_milli": q.qty_offered_milli,
+        "stated_total_paise": q.stated_total_paise,
+        "parse_confidence": q.parse_confidence,
+        "flags": q.flags,
+        "has_file": q.raw_file_ref is not None,
+        "raw_text": q.raw_text if q.source in ("text", "pdf") else None,
+        "received_at": q.received_at,
+        "confirmed_at": q.confirmed_by_vendor_at,
+    }
+
+
+@router.get("/{rfq_id}/quotes")
+def list_quotes(rfq_id: uuid.UUID, user: Builder, db: Db) -> list[dict[str, Any]]:
+    """Every quote and revision for the RFQ, newest first per vendor."""
+    rfq = get_owned(db, Rfq, rfq_id, org_id(user))
+    names = {v.id: v.display_name for v in db.scalars(select(Vendor))}
+    rows = db.scalars(
+        select(Quote).where(Quote.rfq_id == rfq.id).order_by(Quote.vendor_id, Quote.revision.desc())
+    )
+    return [quote_out(q, names.get(q.vendor_id, "")) for q in rows]
+
+
+quotes_router = APIRouter(prefix="/quotes", tags=["quotes"])
+
+MEDIA = {
+    ".pdf": "application/pdf",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+}
+
+
+@quotes_router.get("/{quote_id}/file")
+def quote_file(quote_id: uuid.UUID, user: Builder, db: Db) -> Response:
+    """The vendor's original document, shown next to the parsed values."""
+    q = get_owned(db, Quote, quote_id, org_id(user))
+    if not q.raw_file_ref:
+        raise HTTPException(404, "Not found")
+    ext = q.raw_file_ref[q.raw_file_ref.rfind(".") :].lower()
+    return Response(
+        get_file_store().read(q.raw_file_ref),
+        media_type=MEDIA.get(ext, "application/octet-stream"),
+        headers={
+            "Content-Disposition": f'inline; filename="{q.public_code}{ext}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
