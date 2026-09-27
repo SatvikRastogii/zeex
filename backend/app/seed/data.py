@@ -1,0 +1,227 @@
+"""Static demo data. Every company, person, phone number and GSTIN here is fictional.
+
+Phone ranges: +91 90000 0xxxx admin, +91 90000 1xxxx builder users, +91 90000 2xxxx vendors.
+GST rates are demo defaults; quotes carry their own rate.
+"""
+
+from typing import Any
+
+ADMIN = {"phone": "+919000000001", "name": "Demo Admin"}
+
+ORGS: list[dict[str, Any]] = [
+    {
+        "name": "Sharma Constructions",
+        "gstin": "09AABCS1234K1Z5",
+        "users": [
+            ("+919000010001", "Rakesh Sharma", "owner"),
+            ("+919000010002", "Neha Verma", "purchase_manager"),
+            ("+919000010003", "Imran Khan", "site_engineer"),
+        ],
+        "sites": [
+            ("Noida Sector 62 Tower", "Plot C-14, Sector 62, Noida", "Sector 62, Noida",
+             "201309", 28.6270, 77.3730, "Imran Khan", "+919000010003"),
+            ("Gurugram Sector 49", "Plot 7, Sector 49, Gurugram", "Sector 49, Gurugram",
+             "122018", 28.4120, 77.0610, "Imran Khan", "+919000010003"),
+        ],
+    },
+    {
+        "name": "Greenline Infra",
+        "gstin": "07AACCG5678L1Z2",
+        "users": [
+            ("+919000010011", "Anjali Mehta", "owner"),
+            ("+919000010012", "Vikas Rawat", "purchase_manager"),
+            ("+919000010013", "Suresh Pal", "site_engineer"),
+        ],
+        "sites": [
+            ("Ghaziabad Raj Nagar Extension", "Khasra 212, Raj Nagar Extension, Ghaziabad",
+             "Raj Nagar Extension, Ghaziabad", "201017", 28.6990, 77.4310, "Suresh Pal",
+             "+919000010013"),
+            ("Dwarka Sector 19", "Plot 3, Sector 19, Dwarka, New Delhi", "Sector 19, Dwarka",
+             "110075", 28.5770, 77.0470, "Suresh Pal", "+919000010013"),
+        ],
+    },
+    {
+        "name": "Arora Builders",
+        "gstin": "06AADCA9012M1Z8",
+        "users": [
+            ("+919000010021", "Harpreet Arora", "owner"),
+            ("+919000010022", "Pooja Nair", "purchase_manager"),
+            ("+919000010023", "Deepak Yadav", "site_engineer"),
+        ],
+        "sites": [
+            ("Faridabad Sector 21", "Plot 88, Sector 21C, Faridabad", "Sector 21, Faridabad",
+             "121001", 28.4310, 77.2960, "Deepak Yadav", "+919000010023"),
+            ("Greater Noida Knowledge Park", "Plot 5, Knowledge Park III, Greater Noida",
+             "Knowledge Park, Greater Noida", "201310", 28.4660, 77.4970, "Deepak Yadav",
+             "+919000010023"),
+        ],
+    },
+]  # fmt: skip
+
+PM_LIMIT_PAISE = 50_000_000  # ₹5,00,000
+
+# code, category, name, grade, canonical unit, aliases, HSN, GST bp, base price paise/unit
+CATALOG: list[tuple[str, str, str, str | None, str, list[str], str, int, int]] = [
+    ("OPC53", "cement", "OPC 53 Grade Cement", "OPC 53", "bag",
+     ["cement 53 grade", "opc 53", "53 grade cement", "opc cement", "cement opc 53"],
+     "2523", 1800, 39000),
+    ("PPC", "cement", "PPC Cement", "PPC", "bag",
+     ["ppc", "pozzolana cement", "cement ppc"], "2523", 1800, 36000),
+    ("TMT500D", "steel", "TMT Bar Fe 500D", "Fe 500D", "tonne",
+     ["saria", "sariya", "tmt", "tmt bar", "rebar", "fe500d", "fe 500d", "steel bar"],
+     "7214", 1800, 5800000),
+    ("BWIRE", "steel", "Binding Wire", "18 gauge", "kg",
+     ["binding wire", "bandhai wire", "tar", "gi binding wire"], "7217", 1800, 7500),
+    ("REDBRICK", "bricks", "Red Clay Bricks", "Class A", "nos",
+     ["red bricks", "red brick", "int", "eent", "clay bricks", "bricks"], "6904", 1200, 800),
+    ("FLYASH", "bricks", "Fly Ash Bricks", None, "nos",
+     ["fly ash bricks", "flyash brick", "fly ash"], "6815", 1200, 650),
+    ("RIVERSAND", "sand", "River Sand", None, "cft",
+     ["sand", "reti", "ret", "river sand", "yamuna sand", "badarpur"], "2505", 500, 6000),
+    ("MSAND", "sand", "M-Sand", None, "cft",
+     ["m sand", "m-sand", "manufactured sand", "msand", "crusher sand"], "2517", 500, 4800),
+    ("AGG20", "aggregate", "20 mm Aggregate", "20 mm", "cft",
+     ["20mm gitti", "20 mm gitti", "bajri 20mm", "20 mm stone", "20mm aggregate"],
+     "2517", 500, 5500),
+    ("AGG10", "aggregate", "10 mm Aggregate", "10 mm", "cft",
+     ["10mm gitti", "10 mm gitti", "10 mm stone", "10mm aggregate"], "2517", 500, 5800),
+    ("AAC", "blocks", "AAC Blocks", "600x200x150", "nos",
+     ["aac block", "aac blocks", "aac", "siporex"], "6810", 1200, 6000),
+    ("VTILE", "tiles", "Vitrified Tiles 600x600", "600x600", "box",
+     ["vitrified tiles", "tiles 2x2", "600x600 tiles", "2x2 tiles", "vitrified"],
+     "6907", 1800, 55000),
+]  # fmt: skip
+
+# (item_code or None for generic, from_unit, to_unit, numerator, denominator):
+# 1 from_unit == numerator/denominator to_unit
+CONVERSIONS: list[tuple[str | None, str, str, int, int]] = [
+    (None, "tonne", "kg", 1000, 1),
+    (None, "brass", "cft", 100, 1),
+    ("OPC53", "bag", "kg", 50, 1),
+    ("PPC", "bag", "kg", 50, 1),
+]
+
+ALL_ORGS = [o["name"] for o in ORGS]
+
+# Vendor fields: display name, legal suffix, phone, GSTIN (None = missing), home (lat, lng),
+# service pincodes, radius km, items {code: weekly capacity in canonical units},
+# brands, languages, credit days, persona, linked orgs, blocked by orgs, opted out,
+# reliability (chance a historical delivery was on time).
+VENDORS: list[dict[str, Any]] = [
+    # cement (6)
+    dict(name="Shree Balaji Cement Traders", phone="+919000020001", gstin="09AAKFS1001A1Z3",
+         at=(28.5800, 77.3300), pins=["201301", "201309", "201310"], radius=40,
+         items={"OPC53": 1500, "PPC": 1000}, brands=["UltraTech", "ACC"], langs=["en", "hi"],
+         credit=15, persona="cooperative", reliability=0.92),
+    dict(name="Gupta Building Materials", phone="+919000020002", gstin="09AAKFG1002B1Z7",
+         at=(28.6700, 77.4400), pins=["201001", "201017", "201309"], radius=40,
+         items={"OPC53": 1000, "PPC": 800}, brands=["Ambuja", "ACC"], langs=["en", "hi"],
+         credit=7, persona="stubborn", reliability=0.85,
+         orgs=["Sharma Constructions", "Greenline Infra"]),
+    dict(name="Singh Cement Agency", phone="+919000020003", gstin="06AAKFS1003C1Z1",
+         at=(28.4600, 77.0300), pins=["122001", "122018", "110075"], radius=35,
+         items={"OPC53": 1200, "PPC": 1200}, brands=["UltraTech", "Shree"], langs=["hi"],
+         credit=0, persona="hinglish", reliability=0.8),
+    dict(name="Delhi Cement Depot", phone="+919000020004", gstin="07AAKFD1004D1Z9",
+         at=(28.6200, 77.2100), pins=["110075", "110001"], radius=40,
+         items={"OPC53": 900, "PPC": 600}, brands=["JK Lakshmi", "ACC"], langs=["en", "hi"],
+         credit=30, persona="vague", reliability=0.7, blocked_by=["Greenline Infra"]),
+    dict(name="Mahalaxmi Traders", phone="+919000020005", gstin="06AAKFM1005E1Z4",
+         at=(28.4100, 77.3100), pins=["121001", "121002"], radius=40,
+         items={"OPC53": 150, "PPC": 150}, brands=["Ambuja"], langs=["en", "hi"],
+         credit=15, persona="term_changer", reliability=0.88),
+    dict(name="Yadav Cement Store", phone="+919000020006", gstin="09AAKFY1006F1Z2",
+         at=(28.4700, 77.5000), pins=["201310", "201308"], radius=40,
+         items={"OPC53": 800, "PPC": 800}, brands=["UltraTech"], langs=["hi", "en"],
+         credit=7, persona="slow", reliability=0.75),
+    # steel (3)
+    dict(name="Aggarwal Steel Syndicate", phone="+919000020007", gstin="09AAKFA1007G1Z6",
+         at=(28.6600, 77.4200), pins=["201001", "201017"], radius=40,
+         items={"TMT500D": 40, "BWIRE": 2000}, brands=["Tata Tiscon", "SAIL"],
+         langs=["en", "hi"], credit=15, persona="pdf_sender", reliability=0.9),
+    dict(name="Bansal Iron and Steel", phone="+919000020008", gstin="06AAKFB1008H1Z0",
+         at=(28.4700, 77.0500), pins=["122001", "122018"], radius=40,
+         items={"TMT500D": 25, "BWIRE": 1500}, brands=["JSW Neosteel", "Kamdhenu"],
+         langs=["en"], credit=7, persona="injection", reliability=0.82),
+    dict(name="Goyal Steel Traders", phone="+919000020009", gstin="06AAKFG1009J1Z8",
+         at=(28.4000, 77.3200), pins=["121001", "201310"], radius=45,
+         items={"TMT500D": 60, "BWIRE": 3000}, brands=["Tata Tiscon", "JSW Neosteel"],
+         langs=["hi", "en"], credit=30, persona="cooperative", reliability=0.93),
+    # bricks (3)
+    dict(name="Chaudhary Brick Kiln", phone="+919000020010", gstin="09AAKFC1010K1Z5",
+         at=(28.7200, 77.4800), pins=["201001", "201017"], radius=45,
+         items={"REDBRICK": 200000}, brands=[], langs=["hi"], credit=0,
+         persona="hinglish", reliability=0.78),
+    dict(name="Harit Fly Ash Products", phone="+919000020011", gstin="09AAKFH1011L1Z3",
+         at=(28.4500, 77.5200), pins=["201310", "201308", "201309"], radius=45,
+         items={"FLYASH": 150000}, brands=[], langs=["en", "hi"], credit=15,
+         persona="cooperative", reliability=0.9),
+    dict(name="Rana Bricks Supply", phone="+919000020012", gstin="06AAKFR1012M1Z1",
+         at=(28.3900, 77.3000), pins=["121001", "121002"], radius=40,
+         items={"REDBRICK": 100000, "FLYASH": 80000}, brands=[], langs=["hi"], credit=7,
+         persona="cooperative", reliability=0.8, opted_out=True),
+    # sand (3)
+    dict(name="Yamuna Sand Suppliers", phone="+919000020013", gstin="09AAKFY1013N1Z9",
+         at=(28.5600, 77.3400), pins=["201301", "201309"], radius=40,
+         items={"RIVERSAND": 20000}, brands=[], langs=["hi", "en"], credit=0,
+         persona="vague", reliability=0.76),
+    dict(name="Aravali M-Sand Co", phone="+919000020014", gstin="06AAKFA1014P1Z7",
+         at=(28.4200, 77.1000), pins=["122001", "122018", "121001"], radius=45,
+         items={"MSAND": 30000}, brands=[], langs=["en"], credit=15,
+         persona="cooperative", reliability=0.88),
+    dict(name="Tyagi Sand and Grit", phone="+919000020015", gstin=None,
+         at=(28.6800, 77.4500), pins=["201001", "201017"], radius=40,
+         items={"RIVERSAND": 15000, "MSAND": 15000}, brands=[], langs=["hi"], credit=0,
+         persona="cooperative", reliability=0.7),
+    # aggregate (3)
+    dict(name="Kasana Stone Crusher", phone="+919000020016", gstin="06AAKFK1016Q1Z2",
+         at=(28.3500, 77.2800), pins=["121001", "121002"], radius=50,
+         items={"AGG20": 25000, "AGG10": 20000}, brands=[], langs=["hi"], credit=7,
+         persona="stubborn", reliability=0.83),
+    dict(name="Bhati Grit Udyog", phone="+919000020017", gstin="09AAKFB1017R1Z0",
+         at=(28.4900, 77.5400), pins=["201310", "201308"], radius=45,
+         items={"AGG20": 20000, "AGG10": 15000}, brands=[], langs=["hi", "en"], credit=0,
+         persona="cooperative", reliability=0.86),
+    dict(name="Nagar Aggregates", phone="+919000020018", gstin="09AAKFN1018S1Z8",
+         at=(28.6000, 77.3900), pins=["201301", "201309", "201017"], radius=40,
+         items={"AGG20": 18000, "AGG10": 18000}, brands=[], langs=["en", "hi"], credit=15,
+         persona="term_changer", reliability=0.8),
+    # blocks (3)
+    dict(name="Bharat AAC Blocks", phone="+919000020019", gstin="09AAKFB1019T1Z6",
+         at=(28.7000, 77.4000), pins=["201001", "201017", "201309"], radius=50,
+         items={"AAC": 40000}, brands=["Bharat AAC"], langs=["en"], credit=30,
+         persona="cooperative", reliability=0.91),
+    dict(name="Ecobuild Blocks", phone="+919000020020", gstin="06AAKFE1020U1Z4",
+         at=(28.4400, 77.0800), pins=["122001", "122018", "110075"], radius=45,
+         items={"AAC": 30000}, brands=["Ecobuild"], langs=["en"], credit=15,
+         persona="stubborn", reliability=0.84),
+    dict(name="Sai Blocks Depot", phone="+919000020021", gstin="09AAKFS1021V1Z2",
+         at=(28.5700, 77.3200), pins=["201301", "201309", "201310"], radius=40,
+         items={"AAC": 25000}, brands=["Magicrete"], langs=["hi", "en"], credit=7,
+         persona="slow", reliability=0.77),
+    # tiles (3)
+    dict(name="Tiles Galaxy", phone="+919000020022", gstin="07AAKFT1022W1Z0",
+         at=(28.6500, 77.1400), pins=["110075", "110001", "122018"], radius=45,
+         items={"VTILE": 3000}, brands=["Kajaria", "Somany"], langs=["en"], credit=30,
+         persona="pdf_sender", reliability=0.9),
+    dict(name="Rathi Ceramics", phone="+919000020023", gstin="09AAKFR1023X1Z8",
+         at=(28.5900, 77.3500), pins=["201301", "201309", "201310"], radius=40,
+         items={"VTILE": 2500}, brands=["Johnson", "Kajaria"], langs=["en", "hi"],
+         credit=15, persona="cooperative", reliability=0.87),
+    dict(name="Kajal Tile Center", phone="+919000020024", gstin="06AAKFK1024Y1Z6",
+         at=(28.4600, 77.0200), pins=["122001", "122018"], radius=40,
+         items={"VTILE": 2000}, brands=["Somany"], langs=["hi"], credit=7,
+         persona="vague", reliability=0.79),
+]  # fmt: skip
+
+HISTORY_COUNT = 30
+HISTORY_ITEMS = ["OPC53", "OPC53", "OPC53", "PPC", "TMT500D", "RIVERSAND", "AGG20", "AAC"]
+# Typical order quantities in canonical units.
+HISTORY_QTY = {
+    "OPC53": (100, 600),
+    "PPC": (100, 400),
+    "TMT500D": (5, 20),
+    "RIVERSAND": (500, 2000),
+    "AGG20": (500, 2000),
+    "AAC": (2000, 8000),
+}
