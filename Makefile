@@ -1,5 +1,5 @@
 SHELL := bash
-.PHONY: env install db migrate seed reset demo dev test lint fmt stop
+.PHONY: env install db migrate seed reset demo dev test e2e lint fmt stop
 
 env:
 	@test -f .env || { cp .env.example .env; echo "created .env from .env.example"; }
@@ -37,6 +37,11 @@ dev: install migrate
 
 test: db
 	cd backend && uv run pytest
+
+# Browser journeys (Playwright). Resets the dev database and loads the demo first;
+# starts the API and UI if they are not already running.
+e2e: migrate
+	cd frontend && pnpm exec playwright install chromium && pnpm e2e
 
 lint:
 	cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests
