@@ -267,6 +267,8 @@ def validate_row(
     other_site_names: set[str],
 ) -> RowResult:
     inp = {k: cell_text(raw.get(k)) for k in FIELDS}
+    if raw.get("catalog_item_id"):
+        inp["catalog_item_id"] = str(raw["catalog_item_id"])  # echo the builder's choice
     r = RowResult(line_no=line_no, input=inp)
 
     for k, v in raw.items():

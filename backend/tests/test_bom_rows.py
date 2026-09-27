@@ -179,6 +179,7 @@ def test_unknown_item_suggests_and_requires_choice() -> None:
 def test_chosen_item_overrides_text() -> None:
     r = check(row(item="cemnt", catalog_item_id=str(PPC.id)))[0]
     assert r["errors"] == [] and r["item"]["code"] == "PPC"
+    assert r["input"]["catalog_item_id"] == str(PPC.id)  # kept for the next check
 
 
 def test_unit_conversion_to_canonical() -> None:
