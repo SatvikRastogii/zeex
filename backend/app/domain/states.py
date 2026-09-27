@@ -44,7 +44,7 @@ RFQ: dict[str, set[str]] = {
     "insufficient_quotes": {"bidding", "evaluating"},
     "negotiating": {"awaiting_approval"},
     # "Compare again" / runner-up / re-negotiate go back a step
-    "awaiting_approval": {"awarded", "negotiating", "evaluating"},
+    "awaiting_approval": {"awarded", "negotiating", "evaluating", "bidding"},  # bidding = re-bid
     "awarded": {"closed", "awaiting_approval"},
     "no_vendors_matched": {"matching"},
     "closed": set(),
