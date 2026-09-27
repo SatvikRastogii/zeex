@@ -52,3 +52,17 @@ Newest at the bottom. Each entry: decision, reason.
 - **GST rates in the seed catalog are demo defaults** (cement 18%, bricks/AAC 12%, sand/aggregate 5%, steel/tiles 18%). They are not tax advice; each quote carries its own rate.
 - **Seed history:** 30 closed work orders over the last ~6 months relative to the IST date at seed time, generated from a fixed random seed. A re-run skips existing history (keyed by BOM title) and recomputes vendor ratings from it, so two runs give identical results.
 - **Phone numbers** use `+91 90000 xxxxx` (admin 0xxxx, builders 1xxxx, vendors 2xxxx) and are fictional. The simulated channel never sends to them.
+
+## Stage 3
+
+- **Auth uses the wall clock, never the demo clock.** OTP expiry, rate limits and the 12-hour session run on real time, so jumping the demo clock forward does not log everyone out. Business rules use the demo clock.
+- **Server-side sessions table.** The JWT (HS256, in an httpOnly SameSite=Lax cookie) only carries a session id; each request checks the row for revocation and expiry. Logout revokes the row, so a copied cookie stops working.
+- **One login for everyone.** The phone number decides the account: active builder/admin user first, then vendor. Opted-out vendors can still sign in to the inbox.
+- **Unknown numbers get the same "sent" response** and no challenge is created. In demo mode, known numbers also get `demo_otp` in the response for the banner, which reveals whether a number is registered. That is acceptable only in demo mode.
+- **Only the latest challenge per phone counts.** Requesting a new code makes the older ones unusable. "Latest" is by database insert time; ordering by expiry tied under a frozen clock (caught by a test).
+- **Rate-limit window is derived from `expires_at − 5 min`**, so it follows the injected clock in tests.
+- **Wrong-kind access is 403** (vendor on a builder endpoint, builder on vendor/admin endpoints). Cross-tenant ids are 404.
+- **Owner cannot deactivate or demote themselves**, which prevents locking an org out.
+- **Demo accounts endpoint** (`GET /api/auth/demo-accounts`) exists only in demo mode and lists the seeded logins on the sign-in screen.
+- **Test cleanup uses DELETE with `session_replication_role = replica`** instead of TRUNCATE (about 4x faster on Docker Desktop); this bypasses the audit trigger for tests only.
+- **Permission rows without endpoints yet** (BOM create, shortlist edit, take over, approve, delivery confirm) are covered by the matrix test now; each gets an endpoint test in the stage that adds the endpoint.

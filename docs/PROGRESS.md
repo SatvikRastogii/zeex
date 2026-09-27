@@ -14,8 +14,14 @@
 - Idempotent seed: 3 orgs, 10 users, 6 sites, 12 catalog items, 24 vendors (edge-case vendors included), 30 historical closed orders with price history and derived ratings.
 - `make migrate`, `make seed`, `make reset`.
 
+## Stage 3: Authentication, roles and tenancy (done)
+- Phone OTP (argon2-hashed, 5 min, single use, 5 attempts, 5 per 15 min) → JWT cookie backed by a revocable 12 h session row.
+- Permission matrix (Section 11), role guards, `get_owned` tenant helper (404 across tenants).
+- Endpoints: auth (request/verify/logout/me/demo-accounts), org settings (weights sum to 100), users (owner only), sites, vendor messages (own only), admin clock.
+- UI: sign-in with the demo OTP banner and demo accounts table, top bar with user · role · org · demo clock, logout, guarded builder/vendor/admin pages.
+
 ## Next
-Stage 3: authentication, roles and tenancy.
+Stage 4: catalog, BOM upload and validation.
 
 ## Known gaps
 - `make demo` arrives with the demo panel (Stage 12).
