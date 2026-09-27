@@ -182,6 +182,27 @@ Filled in stage by stage; gaps are listed at the bottom with a reason.
 | Pricing: floor, 3%/2%/final, match benchmark | As specified | `test_pricing.py` |
 | Take-over permissions and tenancy | Site engineer 403; other org 404 | `test_negotiation.py::test_take_over_permissions_and_tenancy` |
 
+## Approval, work orders and conflicts (Stage 10)
+
+| Case | Behaviour | Test |
+|---|---|---|
+| Two users approve at the same time | One wins; the other gets "Already approved by X at HH:MM" | `test_approvals.py::test_two_users_approve_at_the_same_time`, `::test_second_approver_sees_who_approved` |
+| Double-click approve | Idempotent: same POs, nothing new | `test_approvals.py::test_double_click_is_idempotent` |
+| Approval after an offer expired | Blocked; reconfirm option | `test_approvals.py::test_expired_offer_blocks_approval_and_can_be_reconfirmed` |
+| Above the approver's limit | Routed to the owner, not rejected | `test_approvals.py::test_pm_above_limit_is_routed_to_owner`, `::test_pm_within_limit_approves` |
+| Site engineer approves | 403 | `test_approvals.py::test_site_engineer_cannot_approve` |
+| Above max price | Needs explicit override | `test_approvals.py::test_above_max_needs_override` |
+| Capacity conflict across builders | Second award blocked; runner-up offered and approved | `test_approvals.py::test_capacity_conflict_across_builders` |
+| Vendor confirms | `vendor_confirmed` | `test_approvals.py::test_vendor_confirms_po` |
+| Vendor declines after award | Capacity released; runner-up offered (one tap) | `test_approvals.py::test_vendor_declines_runner_up_offered` |
+| Vendor never confirms | PO expires; runner-up offered | `test_approvals.py::test_unconfirmed_po_expires_and_runner_up_offered` |
+| Runner-up also expired | Approval blocked; re-open bidding without the failed vendor | `test_approvals.py::test_runner_up_also_expired_then_rebid` |
+| Split award | Several POs covering the full quantity | `test_approvals.py::test_split_award_issues_several_pos` |
+| Cancel BOM during negotiation | Threads closed, vendors notified, no POs, no nudges | `test_approvals.py::test_cancel_bom_during_negotiation` |
+| Cancel after PO issued | PO cancelled, vendor notified, capacity released | `test_approvals.py::test_cancel_after_po_issued_releases_capacity`, `::test_cancel_single_po` |
+| Exact address before award | Only in the winner's PO message | `test_approvals.py::test_approve_issues_po_to_winner_and_tells_the_others` |
+| Other org's POs | 404 | `test_approvals.py::test_cross_tenant` |
+
 ## Gaps
 
 | Case | Reason |

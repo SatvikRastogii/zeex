@@ -61,8 +61,14 @@
 - Scripted personas; endpoints for thread view, take over, manual message, close.
 - UI: Negotiation view (threads side by side with transcripts, offers, handoff reasons, take over).
 
+## Stage 10: Approval, work orders and conflicts (done)
+- Approval: idempotent, optimistic locking, limits with routing to the owner, expired-offer block + reconfirm, max-price override, split approval.
+- Work Order Agent: PO amounts and PDF, capacity reservation under row locks, winner/loser messages, confirm/decline buttons, confirmation timeout, runner-up, re-bid.
+- Cancellation of BOMs and POs with notifications and capacity release; BOM status advances with awards.
+- UI: recommendation and approval panel (savings, lowest price, runner-up, override), work orders list and detail, builder navigation, dashboard "Needs action".
+
 ## Next
-Stage 10: approval, work orders and conflicts.
+Stage 11: delivery, invoices, ratings and closure.
 
 ## Known gaps
 - `make demo` arrives with the demo panel (Stage 12).
