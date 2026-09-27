@@ -97,10 +97,14 @@ def demo_accounts(db: Db) -> list[dict[str, str]]:
     orgs = {o.id: o.name for o in db.scalars(select(BuilderOrg))}
     users = db.scalars(select(User).where(User.is_active).order_by(User.phone))
     out = [
-        {"phone": u.phone, "name": u.name, "role": u.role,
-         "org": orgs.get(u.builder_org_id, "Platform") if u.builder_org_id else "Platform"}
+        {
+            "phone": u.phone,
+            "name": u.name,
+            "role": u.role,
+            "org": orgs.get(u.builder_org_id, "Platform") if u.builder_org_id else "Platform",
+        }
         for u in users
-    ]  # fmt: skip
+    ]
     vendors = db.scalars(select(Vendor).order_by(Vendor.phone))
     out += [
         {"phone": v.phone, "name": v.display_name, "role": "vendor", "org": ""} for v in vendors

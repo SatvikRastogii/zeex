@@ -128,6 +128,14 @@ def transition(
         log.warning("refused %s %s: %s -> %s (%s)", entity, row.id, current, target, actor)
         raise InvalidTransition(entity, current, target)
     setattr(row, field, target)
-    audit(db, clock, actor=actor, action=f"{entity}.{target}", entity=entity, entity_id=row.id,
-          org_id=getattr(row, "builder_org_id", None), before={field: current},
-          after={field: target, "reason": reason} if reason else {field: target})  # fmt: skip
+    audit(
+        db,
+        clock,
+        actor=actor,
+        action=f"{entity}.{target}",
+        entity=entity,
+        entity_id=row.id,
+        org_id=getattr(row, "builder_org_id", None),
+        before={field: current},
+        after={field: target, "reason": reason} if reason else {field: target},
+    )

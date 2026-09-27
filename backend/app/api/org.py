@@ -87,9 +87,16 @@ def put_settings(body: SettingsIn, user: SettingsEditor, db: Db, clock: BizClock
     before = org_settings(org.settings)
     org.settings = {**before, **body.model_dump()}
     audit(
-        db, clock, actor=f"user:{user.id}", action="settings.update", entity="builder_org",
-        entity_id=org.id, org_id=org.id, before=before, after=org.settings,
-    )  # fmt: skip
+        db,
+        clock,
+        actor=f"user:{user.id}",
+        action="settings.update",
+        entity="builder_org",
+        entity_id=org.id,
+        org_id=org.id,
+        before=before,
+        after=org.settings,
+    )
     db.commit()
     return {"settings": org.settings}
 
@@ -120,9 +127,15 @@ def create_user(body: UserIn, user: UserManager, db: Db, clock: BizClock) -> dic
     db.add(new)
     db.flush()
     audit(
-        db, clock, actor=f"user:{user.id}", action="user.create", entity="user",
-        entity_id=new.id, org_id=org_id(user), after=_user_out(new),
-    )  # fmt: skip
+        db,
+        clock,
+        actor=f"user:{user.id}",
+        action="user.create",
+        entity="user",
+        entity_id=new.id,
+        org_id=org_id(user),
+        after=_user_out(new),
+    )
     db.commit()
     return _user_out(new)
 
@@ -146,9 +159,16 @@ def patch_user(
     for k, v in changes.items():
         setattr(target, k, v)
     audit(
-        db, clock, actor=f"user:{user.id}", action="user.update", entity="user",
-        entity_id=target.id, org_id=org_id(user), before=before, after=_user_out(target),
-    )  # fmt: skip
+        db,
+        clock,
+        actor=f"user:{user.id}",
+        action="user.update",
+        entity="user",
+        entity_id=target.id,
+        org_id=org_id(user),
+        before=before,
+        after=_user_out(target),
+    )
     db.commit()
     return _user_out(target)
 

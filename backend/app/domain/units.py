@@ -23,16 +23,34 @@ class UnitError(ValueError):
 
 
 UNIT_ALIASES = {
-    "bag": "bag", "bags": "bag", "bori": "bag",
-    "tonne": "tonne", "tonnes": "tonne", "ton": "tonne", "tons": "tonne",
-    "mt": "tonne", "t": "tonne",
-    "kg": "kg", "kgs": "kg", "kilogram": "kg", "kilograms": "kg",
-    "cft": "cft", "cu ft": "cft", "cubic feet": "cft", "cuft": "cft",
+    "bag": "bag",
+    "bags": "bag",
+    "bori": "bag",
+    "tonne": "tonne",
+    "tonnes": "tonne",
+    "ton": "tonne",
+    "tons": "tonne",
+    "mt": "tonne",
+    "t": "tonne",
+    "kg": "kg",
+    "kgs": "kg",
+    "kilogram": "kg",
+    "kilograms": "kg",
+    "cft": "cft",
+    "cu ft": "cft",
+    "cubic feet": "cft",
+    "cuft": "cft",
     "brass": "brass",
-    "nos": "nos", "no": "nos", "pcs": "nos", "pc": "nos", "piece": "nos",
-    "pieces": "nos", "units": "nos",
-    "box": "box", "boxes": "box",
-}  # fmt: skip
+    "nos": "nos",
+    "no": "nos",
+    "pcs": "nos",
+    "pc": "nos",
+    "piece": "nos",
+    "pieces": "nos",
+    "units": "nos",
+    "box": "box",
+    "boxes": "box",
+}
 
 
 def normalize_unit(raw: str) -> str:

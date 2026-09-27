@@ -209,8 +209,13 @@ class RowResult:
 
 
 def _item_out(i: ItemInfo) -> dict[str, Any]:
-    return {"id": str(i.id), "code": i.code, "name": i.name, "grade": i.grade,
-            "canonical_unit": i.canonical_unit}  # fmt: skip
+    return {
+        "id": str(i.id),
+        "code": i.code,
+        "name": i.name,
+        "grade": i.grade,
+        "canonical_unit": i.canonical_unit,
+    }
 
 
 def cell_text(v: Any) -> str:
@@ -355,8 +360,11 @@ def validate_row(
         elif d < today:
             r.err("needed_by", "Needed-by date is in the past.")
         elif d < earliest:
-            r.err("needed_by", f"Too soon. Earliest feasible date is {earliest:%d %b %Y} "
-                               "(bid window, negotiation and delivery).")  # fmt: skip
+            r.err(
+                "needed_by",
+                f"Too soon. Earliest feasible date is {earliest:%d %b %Y} "
+                "(bid window, negotiation and delivery).",
+            )
         else:
             r.needed_by = d
 
@@ -424,9 +432,10 @@ def validate_rows(
     if len(raws) > MAX_ROWS:
         raise FileError(f"Too many rows: {len(raws)}. The limit is {MAX_ROWS} per BOM; split it.")
     rows = [
-        validate_row(i + 1, raw, index, today=today, site_name=site_name,
-                     other_site_names=other_site_names)
+        validate_row(
+            i + 1, raw, index, today=today, site_name=site_name, other_site_names=other_site_names
+        )
         for i, raw in enumerate(raws)
-    ]  # fmt: skip
+    ]
     merge_duplicates(rows)
     return rows
